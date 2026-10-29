@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Sesion
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.SesionActual
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.usecase.IniciarSesionUseCase
 
 data class LoginUiState(
@@ -16,7 +17,8 @@ data class LoginUiState(
 )
 
 class LoginViewModel(
-    private val iniciarSesion: IniciarSesionUseCase
+    private val iniciarSesion: IniciarSesionUseCase,
+    private val sesionActual: SesionActual
 ) : ViewModel() {
 
     private val _estado = MutableStateFlow(LoginUiState())
@@ -28,6 +30,7 @@ class LoginViewModel(
 
             try {
                 val sesion = iniciarSesion(usuario, contrasena)
+                sesionActual.abrir(sesion)
                 _estado.value = LoginUiState(sesion = sesion)
             } catch (e: CancellationException) {
                 throw e
@@ -40,6 +43,7 @@ class LoginViewModel(
     }
 
     fun cerrarSesion() {
+        sesionActual.cerrar()
         _estado.value = LoginUiState()
     }
 }
