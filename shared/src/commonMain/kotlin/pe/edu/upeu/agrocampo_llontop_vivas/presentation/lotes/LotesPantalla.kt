@@ -1,6 +1,7 @@
 package pe.edu.upeu.agrocampo_llontop_vivas.presentation.lotes
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Labor
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Lote
 import pe.edu.upeu.agrocampo_llontop_vivas.resources.Res
 import pe.edu.upeu.agrocampo_llontop_vivas.resources.agrocampo_logo
@@ -44,9 +46,7 @@ fun LotesPantalla(
 ) {
     val estado by viewModel.estado.collectAsState()
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -67,57 +67,95 @@ fun LotesPantalla(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Lotes de cultivo", style = MaterialTheme.typography.titleLarge)
+        val seleccionado = estado.loteSeleccionado
+        if (seleccionado == null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Lotes de cultivo", style = MaterialTheme.typography.titleLarge)
+                Button(
+                    onClick = viewModel::actualizar,
+                    enabled = !estado.sincronizando,
+                    colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)
+                ) {
+                    Text("Actualizar")
+                }
+            }
+
+            if (estado.sincronizando) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Text("  Sincronizando lotes...")
+                }
+            }
+            estado.error?.let { error ->
+                Text(error, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error)
+            }
+            if (estado.lotes.isEmpty() && !estado.sincronizando) {
+                Text("No hay lotes guardados. Conecta con AgroAPI y pulsa Actualizar.",
+                    modifier = Modifier.padding(top = 24.dp))
+            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(estado.lotes, key = { it.id }) { lote ->
+                    TarjetaLote(lote, alSeleccionar = { viewModel.abrirLote(lote) })
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Labores del lote", style = MaterialTheme.typography.titleLarge)
+                OutlinedButton(onClick = viewModel::volverAlListado) {
+                    Text("Volver")
+                }
+            }
+            Text("${seleccionado.codigo} · ${seleccionado.nombre}",
+                style = MaterialTheme.typography.titleMedium, color = VerdeAgro)
+            Text("Valle: ${seleccionado.valle}  |  Cultivo: ${seleccionado.cultivo}")
+            Spacer(modifier = Modifier.height(10.dp))
+
             Button(
-                onClick = viewModel::actualizar,
-                enabled = !estado.sincronizando,
+                onClick = viewModel::actualizarLabores,
+                enabled = !estado.sincronizandoLabores,
                 colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)
             ) {
-                Text("Actualizar")
+                Text("Actualizar labores")
             }
-        }
-
-        if (estado.sincronizando) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                Text("  Sincronizando lotes...")
+            if (estado.sincronizandoLabores) {
+                Text("Consultando AgroAPI...")
             }
-        }
+            estado.errorLabores?.let { error ->
+                Text("Datos locales disponibles. $error",
+                    color = MaterialTheme.colorScheme.error)
+            }
+            if (estado.labores.isEmpty() && !estado.sincronizandoLabores) {
+                Text("Este lote todavía no tiene labores guardadas.",
+                    modifier = Modifier.padding(top = 12.dp))
+            }
 
-        estado.error?.let { error ->
-            Text(
-                "Sin conexión: $error",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
-        if (estado.lotes.isEmpty() && !estado.sincronizando) {
-            Text(
-                "No hay lotes guardados. Inicia sesión con el servidor activo y pulsa Actualizar.",
-                modifier = Modifier.padding(top = 24.dp)
-            )
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(estado.lotes, key = { it.id }) { lote ->
-                TarjetaLote(lote)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(estado.labores, key = { it.id }) { labor ->
+                    TarjetaLabor(labor)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TarjetaLote(lote: Lote) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun TarjetaLote(lote: Lote, alSeleccionar: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = alSeleccionar)) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text("${lote.codigo} · ${lote.nombre}",
                 style = MaterialTheme.typography.titleMedium,
@@ -128,6 +166,26 @@ private fun TarjetaLote(lote: Lote) {
                 if (lote.campaniaCerrada) "Campaña cerrada" else "Campaña abierta",
                 color = if (lote.campaniaCerrada) MaterialTheme.colorScheme.error else VerdeAgro
             )
+            Text("Toca para ver labores", style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun TarjetaLabor(labor: Labor) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text("${labor.tipo.name} · ${labor.fecha}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold)
+            Text("Responsable: ${labor.responsable}")
+            Text("Cantidad: ${labor.cantidad}")
+            if (labor.observacion.isNotBlank()) {
+                Text("Observación: ${labor.observacion}")
+            }
+            if (labor.pendiente) {
+                Text("Pendiente de sincronizar", color = MaterialTheme.colorScheme.error)
+            }
         }
     }
 }

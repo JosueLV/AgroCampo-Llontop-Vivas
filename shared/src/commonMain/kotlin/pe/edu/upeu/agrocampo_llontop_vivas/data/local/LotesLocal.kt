@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import pe.edu.upeu.agrocampo_llontop_vivas.db.AgroDb
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Lote
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Labor
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.TipoLabor
 
 /**
  * Fuente local observable. La interfaz usa este flujo como fuente de verdad.
@@ -45,6 +47,42 @@ class LotesLocal(private val base: AgroDb) {
                     valle = lote.valle,
                     campaniaCerrada = if (lote.campaniaCerrada) 1L else 0L,
                     dosisMaxima = lote.dosisMaximaPorHectarea
+                )
+            }
+        }
+    }
+
+    fun observarLabores(loteId: Long): Flow<List<Labor>> =
+        base.agroDbQueries.observarLaboresPorLote(loteId)
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { filas ->
+                filas.map { fila ->
+                    Labor(
+                        id = fila.id,
+                        loteId = fila.loteId,
+                        tipo = TipoLabor.valueOf(fila.tipo),
+                        fecha = fila.fecha,
+                        responsable = fila.responsable,
+                        cantidad = fila.cantidad,
+                        observacion = fila.observacion,
+                        pendiente = fila.pendiente != 0L
+                    )
+                }
+            }
+
+    suspend fun guardarLabores(labores: List<Labor>) = withContext(Dispatchers.Default) {
+        base.transaction {
+            labores.forEach { labor ->
+                base.agroDbQueries.guardarLabor(
+                    id = labor.id,
+                    loteId = labor.loteId,
+                    tipo = labor.tipo.name,
+                    fecha = labor.fecha,
+                    responsable = labor.responsable,
+                    cantidad = labor.cantidad,
+                    observacion = labor.observacion,
+                    pendiente = if (labor.pendiente) 1L else 0L
                 )
             }
         }
