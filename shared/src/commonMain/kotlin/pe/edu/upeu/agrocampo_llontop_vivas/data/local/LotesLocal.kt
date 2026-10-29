@@ -117,4 +117,52 @@ class LotesLocal(private val base: AgroDb) {
         nuevoId
     }
 
+    /**
+     * Consulta el estado persistido actual antes de sincronizar. No vacía la cola.
+     */
+    suspend fun obtenerPendientes(): List<Labor> = withContext(Dispatchers.Default) {
+        base.agroDbQueries.observarPendientes().executeAsList().map { fila ->
+            Labor(
+                id = fila.id,
+                loteId = fila.loteId,
+                tipo = TipoLabor.valueOf(fila.tipo),
+                fecha = fila.fecha,
+                responsable = fila.responsable,
+                cantidad = fila.cantidad,
+                observacion = fila.observacion,
+                pendiente = true
+            )
+        }.sortedByDescending { it.id } // -1 antes de -2: orden de creación.
+    }
+
+    fun observarNumeroPendientes(): Flow<Int> =
+        base.agroDbQueries.observarPendientes()
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { it.size }
+
+    /**
+     * Transacción atómica: retira el ID temporal y guarda el ID definitivo
+     * solamente después de recibir la confirmación del backend.
+     */
+    suspend fun confirmarLaborSincronizada(idTemporal: Long, confirmada: Labor) =
+        withContext(Dispatchers.Default) {
+            require(idTemporal < 0 && confirmada.id > 0) {
+                "La confirmación debe tener un identificador real del servidor"
+            }
+            base.transaction {
+                base.agroDbQueries.eliminarLabor(idTemporal)
+                base.agroDbQueries.guardarLabor(
+                    id = confirmada.id,
+                    loteId = confirmada.loteId,
+                    tipo = confirmada.tipo.name,
+                    fecha = confirmada.fecha,
+                    responsable = confirmada.responsable,
+                    cantidad = confirmada.cantidad,
+                    observacion = confirmada.observacion,
+                    pendiente = 0L
+                )
+            }
+        }
+
 }

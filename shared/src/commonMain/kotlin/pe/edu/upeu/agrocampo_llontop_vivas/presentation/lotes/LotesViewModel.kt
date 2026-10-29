@@ -19,6 +19,7 @@ import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.SesionActual
 data class LotesUiState(
     val lotes: List<Lote> = emptyList(),
     val sincronizando: Boolean = false,
+    val pendientes: Int = 0,
     val error: String? = null,
     val loteSeleccionado: Lote? = null,
     val labores: List<Labor> = emptyList(),
@@ -43,15 +44,32 @@ class LotesViewModel(
                 _estado.update { it.copy(lotes = lotes) }
             }
         }
+        viewModelScope.launch {
+            local.observarNumeroPendientes().collect { pendientes ->
+                _estado.update { it.copy(pendientes = pendientes) }
+            }
+        }
         actualizar()
     }
 
+    /**
+     * Reintenta en orden de creación. Si falla el servidor o la red, el
+     * pendiente actual y los siguientes permanecen en SQLDelight.
+     */
+    private suspend fun enviarPendientes() {
+        local.obtenerPendientes().forEach { pendiente ->
+            val confirmada = laboresRemoto.crear(pendiente)
+            local.confirmarLaborSincronizada(pendiente.id, confirmada)
+        }
+    }
+
     fun actualizar() {
-        if (_estado.value.sincronizando) return
+        if (_estado.value.sincronizando || _estado.value.sincronizandoLabores) return
 
         viewModelScope.launch {
             _estado.update { it.copy(sincronizando = true, error = null) }
             try {
+                enviarPendientes()
                 local.guardarLotes(remoto.listarTodos())
             } catch (e: CancellationException) {
                 throw e
@@ -91,11 +109,12 @@ class LotesViewModel(
 
     fun actualizarLabores() {
         val loteId = _estado.value.loteSeleccionado?.id ?: return
-        if (_estado.value.sincronizandoLabores) return
+        if (_estado.value.sincronizandoLabores || _estado.value.sincronizando) return
 
         viewModelScope.launch {
             _estado.update { it.copy(sincronizandoLabores = true, errorLabores = null) }
             try {
+                enviarPendientes()
                 local.guardarLabores(laboresRemoto.listarPorLote(loteId))
             } catch (e: CancellationException) {
                 throw e

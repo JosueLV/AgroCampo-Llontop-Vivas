@@ -84,6 +84,13 @@ fun LotesPantalla(
             }
         }
 
+        if (estado.pendientes > 0) {
+            Text(
+                "Labores pendientes de envío: ${estado.pendientes}",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
         val seleccionado = estado.loteSeleccionado
         if (seleccionado == null) {
@@ -98,7 +105,7 @@ fun LotesPantalla(
                     enabled = !estado.sincronizando,
                     colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)
                 ) {
-                    Text("Actualizar")
+                    Text(if (estado.pendientes > 0) "Sincronizar (${estado.pendientes})" else "Actualizar")
                 }
             }
 
@@ -154,7 +161,7 @@ fun LotesPantalla(
                     enabled = !estado.sincronizandoLabores,
                     modifier = Modifier.weight(1f).height(48.dp)
                 ) {
-                    Text("↻  Actualizar", color = VerdeAgro)
+                    Text(if (estado.pendientes > 0) "↻  Sincronizar (${estado.pendientes})" else "↻  Actualizar", color = VerdeAgro)
                 }
                 if (puedeRegistrar) {
                     Button(

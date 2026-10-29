@@ -4,9 +4,14 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import io.ktor.client.request.parameter
 import kotlinx.coroutines.CancellationException
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.ApiConfig
+import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.dto.CrearLaborDto
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.dto.LaborDto
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.dto.PaginaDto
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.dto.aDominio
@@ -14,6 +19,44 @@ import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.ErrorApi
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Labor
 
 class LaboresRepositorioRemoto(private val cliente: HttpClient) {
+    /**
+     * Registra una labor almacenada sin conexión. El JWT se agrega en ClienteHttp.
+     * Solo la respuesta 2xx permite retirar la labor de la cola local.
+     */
+    suspend fun crear(labor: Labor): Labor {
+        try {
+            val respuesta = cliente.post("${ApiConfig.BASE_URL}/labores") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    CrearLaborDto(
+                        loteId = labor.loteId,
+                        tipo = labor.tipo.name,
+                        fecha = labor.fecha,
+                        cantidad = labor.cantidad,
+                        observacion = labor.observacion
+                    )
+                )
+            }
+            return when (respuesta.status.value) {
+                in 200..299 -> respuesta.body<LaborDto>().aDominio()
+                400 -> throw ErrorApi.Validacion()
+                401 -> throw ErrorApi.NoAutorizado()
+                403 -> throw ErrorApi.SinPrivilegio()
+                404 -> throw ErrorApi.NoEncontrado()
+                409 -> throw ErrorApi.Conflicto()
+                else -> throw ErrorApi.Servidor()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ErrorApi) {
+            throw e
+        } catch (e: HttpRequestTimeoutException) {
+            throw ErrorApi.TiempoAgotado()
+        } catch (e: Exception) {
+            throw ErrorApi.SinConexion()
+        }
+    }
+
     suspend fun listarPorLote(loteId: Long): List<Labor> {
         try {
             val resultado = mutableListOf<Labor>()

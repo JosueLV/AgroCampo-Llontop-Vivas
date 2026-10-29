@@ -16,6 +16,15 @@ data class LaborDto(
     val pendiente: Boolean = false
 )
 
+@Serializable
+data class CrearLaborDto(
+    val loteId: Long,
+    val tipo: String,
+    val fecha: String,
+    val cantidad: Double,
+    val observacion: String
+)
+
 fun LaborDto.aDominio(): Labor = Labor(
     id = id,
     loteId = loteId,
