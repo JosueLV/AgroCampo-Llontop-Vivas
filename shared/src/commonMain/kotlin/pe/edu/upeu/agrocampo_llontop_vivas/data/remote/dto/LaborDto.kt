@@ -25,6 +25,14 @@ data class CrearLaborDto(
     val observacion: String
 )
 
+@Serializable
+data class EditarLaborDto(
+    val tipo: String,
+    val fecha: String,
+    val cantidad: Double,
+    val observacion: String
+)
+
 fun LaborDto.aDominio(): Labor = Labor(
     id = id,
     loteId = loteId,
