@@ -1,5 +1,9 @@
 package pe.edu.upeu.agrocampo_llontop_vivas
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -25,6 +29,7 @@ fun App(driver: SqlDriver) {
         val estado by loginViewModel.estado.collectAsState()
 
         MaterialTheme {
+            Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
             val sesion = estado.sesion
             if (sesion == null) {
                 LoginPantalla(
@@ -41,6 +46,7 @@ fun App(driver: SqlDriver) {
                     rol = sesion.rol,
                     alCerrarSesion = loginViewModel::cerrarSesion
                 )
+            }
             }
         }
     }

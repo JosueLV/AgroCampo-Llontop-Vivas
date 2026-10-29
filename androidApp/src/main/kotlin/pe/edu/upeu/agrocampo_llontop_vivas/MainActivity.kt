@@ -1,6 +1,9 @@
 package pe.edu.upeu.agrocampo_llontop_vivas
 
 import android.os.Bundle
+import android.view.WindowManager
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,8 +16,16 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        // Mantener visible el reloj y el icono de modo avión.
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true // Iconos oscuros sobre fondo claro
+            show(WindowInsetsCompat.Type.statusBars())
+        }
+
         setContent {
             App(driver)
         }
