@@ -72,6 +72,10 @@ kotlin {
         }
     }
 }
+compose.resources {
+    packageOfResClass =
+        "pe.edu.upeu.agrocampo_llontop_vivas.resources"
+}
 
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
