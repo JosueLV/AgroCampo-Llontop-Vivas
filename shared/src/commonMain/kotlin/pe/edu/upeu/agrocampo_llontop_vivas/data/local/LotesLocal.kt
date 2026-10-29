@@ -65,6 +65,7 @@ class LotesLocal(private val base: AgroDb) {
                         fecha = fila.fecha,
                         responsable = fila.responsable,
                         cantidad = fila.cantidad,
+                        cantidadJornales = fila.cantidadJornales.toInt(),
                         observacion = fila.observacion,
                         pendiente = fila.pendiente != 0L
                     )
@@ -81,6 +82,7 @@ class LotesLocal(private val base: AgroDb) {
                     fecha = labor.fecha,
                     responsable = labor.responsable,
                     cantidad = labor.cantidad,
+                    cantidadJornales = labor.cantidadJornales.toLong(),
                     observacion = labor.observacion,
                     pendiente = if (labor.pendiente) 1L else 0L
                 )
@@ -97,7 +99,8 @@ class LotesLocal(private val base: AgroDb) {
         fecha: String,
         responsable: String,
         cantidad: Double,
-        observacion: String
+        observacion: String,
+        cantidadJornales: Int = 1
     ): Long = withContext(Dispatchers.Default) {
         var nuevoId = -1L
         base.transaction {
@@ -110,6 +113,7 @@ class LotesLocal(private val base: AgroDb) {
                 fecha = fecha,
                 responsable = responsable,
                 cantidad = cantidad,
+                cantidadJornales = cantidadJornales.toLong(),
                 observacion = observacion,
                 pendiente = 1L
             )
@@ -129,6 +133,7 @@ class LotesLocal(private val base: AgroDb) {
                 fecha = fila.fecha,
                 responsable = fila.responsable,
                 cantidad = fila.cantidad,
+                cantidadJornales = fila.cantidadJornales.toInt(),
                 observacion = fila.observacion,
                 pendiente = true
             )
@@ -159,6 +164,7 @@ class LotesLocal(private val base: AgroDb) {
                     fecha = confirmada.fecha,
                     responsable = confirmada.responsable,
                     cantidad = confirmada.cantidad,
+                    cantidadJornales = confirmada.cantidadJornales.toLong(),
                     observacion = confirmada.observacion,
                     pendiente = 0L
                 )

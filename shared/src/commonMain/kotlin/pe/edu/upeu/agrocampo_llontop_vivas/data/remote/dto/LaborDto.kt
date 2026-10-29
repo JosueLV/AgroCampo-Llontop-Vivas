@@ -13,7 +13,8 @@ data class LaborDto(
     val responsable: String,
     val cantidad: Double,
     val observacion: String,
-    val pendiente: Boolean = false
+    val pendiente: Boolean = false,
+    val cantidadJornales: Int = 1
 )
 
 @Serializable
@@ -22,7 +23,8 @@ data class CrearLaborDto(
     val tipo: String,
     val fecha: String,
     val cantidad: Double,
-    val observacion: String
+    val observacion: String,
+    val cantidadJornales: Int = 1
 )
 
 @Serializable
@@ -30,7 +32,8 @@ data class EditarLaborDto(
     val tipo: String,
     val fecha: String,
     val cantidad: Double,
-    val observacion: String
+    val observacion: String,
+    val cantidadJornales: Int = 1
 )
 
 fun LaborDto.aDominio(): Labor = Labor(
@@ -41,5 +44,6 @@ fun LaborDto.aDominio(): Labor = Labor(
     responsable = responsable,
     cantidad = cantidad,
     observacion = observacion,
-    pendiente = pendiente
+    pendiente = pendiente,
+    cantidadJornales = cantidadJornales
 )
