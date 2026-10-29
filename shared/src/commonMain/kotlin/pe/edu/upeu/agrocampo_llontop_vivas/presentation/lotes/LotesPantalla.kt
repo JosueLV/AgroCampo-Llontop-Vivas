@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -109,6 +112,15 @@ fun LotesPantalla(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            ControlesFiltrosLotes(
+                estado = estado,
+                alBuscar = viewModel::cambiarBusqueda,
+                alElegirValle = viewModel::seleccionarValle,
+                alCambiarAbiertas = viewModel::cambiarSoloAbiertas
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             if (estado.sincronizando) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -120,8 +132,13 @@ fun LotesPantalla(
                     color = MaterialTheme.colorScheme.error)
             }
             if (estado.lotes.isEmpty() && !estado.sincronizando) {
-                Text("No hay lotes guardados. Conecta con AgroAPI y pulsa Actualizar.",
-                    modifier = Modifier.padding(top = 24.dp))
+                val hayFiltro = estado.busqueda.isNotBlank() ||
+                    estado.valleSeleccionado.isNotBlank() || estado.soloAbiertas
+                Text(
+                    if (hayFiltro) "Ningún lote coincide con los filtros seleccionados."
+                    else "No hay lotes guardados. Conecta con AgroAPI y pulsa Actualizar.",
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -194,6 +211,56 @@ fun LotesPantalla(
                     TarjetaLabor(labor)
                 }
             }
+        }
+    }
+}
+
+/**
+ * Solo presenta los controles. La selección se procesa en el ViewModel y el
+ * filtrado real sucede en FiltrarLotesUseCase sobre el flujo de SQLDelight.
+ */
+@Composable
+private fun ControlesFiltrosLotes(
+    estado: LotesUiState,
+    alBuscar: (String) -> Unit,
+    alElegirValle: (String) -> Unit,
+    alCambiarAbiertas: (Boolean) -> Unit
+) {
+    OutlinedTextField(
+        value = estado.busqueda,
+        onValueChange = alBuscar,
+        label = { Text("Buscar lote por nombre o código") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = estado.soloAbiertas,
+            onCheckedChange = alCambiarAbiertas
+        )
+        Text("Solo campañas abiertas", style = MaterialTheme.typography.bodyMedium)
+    }
+    Text("Valle", style = MaterialTheme.typography.labelMedium)
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FilterChip(
+            selected = estado.valleSeleccionado.isEmpty(),
+            onClick = { alElegirValle("") },
+            label = { Text("Todos") }
+        )
+        estado.valles.forEach { valle ->
+            FilterChip(
+                selected = estado.valleSeleccionado == valle,
+                onClick = { alElegirValle(valle) },
+                label = { Text(valle) }
+            )
         }
     }
 }

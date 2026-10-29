@@ -6,6 +6,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pe.edu.upeu.agrocampo_llontop_vivas.data.local.LotesLocal
@@ -15,9 +16,15 @@ import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Labor
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Lote
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.TipoLabor
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.SesionActual
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.usecase.FiltrarLotesUseCase
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.usecase.FiltrosLotes
 
 data class LotesUiState(
     val lotes: List<Lote> = emptyList(),
+    val valles: List<String> = emptyList(),
+    val valleSeleccionado: String = "",
+    val soloAbiertas: Boolean = false,
+    val busqueda: String = "",
     val sincronizando: Boolean = false,
     val pendientes: Int = 0,
     val error: String? = null,
@@ -31,18 +38,31 @@ class LotesViewModel(
     private val local: LotesLocal,
     private val remoto: LotesRepositorioRemoto,
     private val laboresRemoto: LaboresRepositorioRemoto,
-    private val sesionActual: SesionActual
+    private val sesionActual: SesionActual,
+    private val filtrarLotes: FiltrarLotesUseCase
 ) : ViewModel() {
 
     private val _estado = MutableStateFlow(LotesUiState())
     val estado = _estado.asStateFlow()
     private var observacionLabores: Job? = null
+    private val filtros = MutableStateFlow(FiltrosLotes())
 
     init {
         viewModelScope.launch {
-            local.observarLotes().collect { lotes ->
-                _estado.update { it.copy(lotes = lotes) }
-            }
+            combine(local.observarLotes(), filtros) { lotes, filtro -> lotes to filtro }
+                .collect { (lotes, filtro) ->
+                    val valles = lotes.map { it.valle }.distinct().sorted()
+                    val visibles = filtrarLotes(lotes, filtro)
+                    _estado.update {
+                        it.copy(
+                            lotes = visibles,
+                            valles = valles,
+                            valleSeleccionado = filtro.valle,
+                            soloAbiertas = filtro.soloAbiertas,
+                            busqueda = filtro.busqueda
+                        )
+                    }
+                }
         }
         viewModelScope.launch {
             local.observarNumeroPendientes().collect { pendientes ->
@@ -50,6 +70,19 @@ class LotesViewModel(
             }
         }
         actualizar()
+    }
+
+    /** Cambiar filtros no hace llamadas HTTP: se recalcula el flujo de SQLDelight. */
+    fun seleccionarValle(valle: String) {
+        filtros.update { it.copy(valle = valle) }
+    }
+
+    fun cambiarSoloAbiertas(activado: Boolean) {
+        filtros.update { it.copy(soloAbiertas = activado) }
+    }
+
+    fun cambiarBusqueda(texto: String) {
+        filtros.update { it.copy(busqueda = texto) }
     }
 
     /**
