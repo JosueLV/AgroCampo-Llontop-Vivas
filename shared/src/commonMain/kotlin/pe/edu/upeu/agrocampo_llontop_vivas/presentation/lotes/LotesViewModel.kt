@@ -31,7 +31,10 @@ data class LotesUiState(
     val loteSeleccionado: Lote? = null,
     val labores: List<Labor> = emptyList(),
     val sincronizandoLabores: Boolean = false,
-    val errorLabores: String? = null
+    val errorLabores: String? = null,
+    val laborEditando: Labor? = null,
+    val guardandoEdicion: Boolean = false,
+    val errorEdicion: String? = null
 )
 
 class LotesViewModel(
@@ -119,7 +122,8 @@ class LotesViewModel(
     fun abrirLote(lote: Lote) {
         observacionLabores?.cancel()
         _estado.update {
-            it.copy(loteSeleccionado = lote, labores = emptyList(), errorLabores = null)
+            it.copy(loteSeleccionado = lote, labores = emptyList(), errorLabores = null,
+                laborEditando = null, guardandoEdicion = false, errorEdicion = null)
         }
         observacionLabores = viewModelScope.launch {
             local.observarLabores(lote.id).collect { labores ->
@@ -136,7 +140,8 @@ class LotesViewModel(
     fun volverAlListado() {
         observacionLabores?.cancel()
         _estado.update {
-            it.copy(loteSeleccionado = null, labores = emptyList(), errorLabores = null)
+            it.copy(loteSeleccionado = null, labores = emptyList(), errorLabores = null,
+                laborEditando = null, guardandoEdicion = false, errorEdicion = null)
         }
     }
 
@@ -161,6 +166,84 @@ class LotesViewModel(
 
     fun puedeRegistrarEn(lote: Lote): Boolean =
         !lote.campaniaCerrada && sesionActual.tienePrivilegio("LABOR_CREAR")
+
+    /** El backend comprueba la autoría y el plazo; la interfaz comprueba el privilegio. */
+    fun puedeEditarLabor(labor: Labor): Boolean {
+        val lote = _estado.value.loteSeleccionado ?: return false
+        return !lote.campaniaCerrada &&
+            labor.loteId == lote.id &&
+            !labor.pendiente &&
+            labor.id > 0L &&
+            sesionActual.tienePrivilegio("LABOR_EDITAR")
+    }
+
+    fun comenzarEdicion(labor: Labor) {
+        if (!puedeEditarLabor(labor) || _estado.value.guardandoEdicion) return
+        _estado.update { it.copy(laborEditando = labor, errorEdicion = null) }
+    }
+
+    fun cancelarEdicion() {
+        if (_estado.value.guardandoEdicion) return
+        _estado.update { it.copy(laborEditando = null, errorEdicion = null) }
+    }
+
+    /**
+     * Devuelve un error solo si falla la validación local. Si es válida,
+     * el diálogo permanece abierto hasta recibir confirmación HTTP.
+     */
+    fun guardarEdicion(
+        tipo: TipoLabor,
+        fecha: String,
+        cantidadTexto: String,
+        observacion: String
+    ): String? {
+        val labor = _estado.value.laborEditando ?: return "Selecciona una labor."
+        if (_estado.value.guardandoEdicion) return "Ya se está guardando la corrección."
+        if (!puedeEditarLabor(labor)) return "No tienes permiso para editar esta labor."
+
+        val fechaFinal = fecha.trim()
+        if (!Regex("""\d{4}-\d{2}-\d{2}""").matches(fechaFinal)) {
+            return "Escribe la fecha AAAA-MM-DD."
+        }
+        val cantidad = cantidadTexto.trim().replace(',', '.').toDoubleOrNull()
+        if (cantidad == null || !cantidad.isFinite() || cantidad <= 0.0) {
+            return "La cantidad debe ser mayor que cero."
+        }
+        if (observacion.length > 500) return "La observación admite máximo 500 caracteres."
+
+        viewModelScope.launch {
+            _estado.update { it.copy(guardandoEdicion = true, errorEdicion = null) }
+            try {
+                val actualizada = laboresRemoto.editar(
+                    labor.copy(
+                        tipo = tipo,
+                        fecha = fechaFinal,
+                        cantidad = cantidad,
+                        observacion = observacion.trim()
+                    )
+                )
+                local.guardarLabores(listOf(actualizada))
+                _estado.update {
+                    it.copy(
+                        laborEditando = null,
+                        guardandoEdicion = false,
+                        errorEdicion = null,
+                        errorLabores = null
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _estado.update {
+                    it.copy(
+                        guardandoEdicion = false,
+                        errorEdicion = e.message ?: "No fue posible guardar la corrección."
+                    )
+                }
+            }
+        }
+        return null
+    }
 
     /**
      * Valida datos en la pantalla y almacena una labor pendiente sin requerir internet.
