@@ -118,4 +118,64 @@ class LaboresRemotoTest {
         }
     }
 
+
+    @Test
+    fun supervisorCorrigeLaborAjenaPorPut() = runTest {
+        val motor = MockEngine { peticion ->
+            assertEquals(HttpMethod.Put, peticion.method)
+            assertEquals("/api/v1/labores/8", peticion.url.encodedPath)
+            respond(
+                content = """{"id":8,"loteId":3,"tipo":"RIEGO","fecha":"2026-10-29","responsable":"Jefe de campo 1","cantidad":2.0,"observacion":"Control de calidad","pendiente":false}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        val cliente = crearCliente(motor)
+        try {
+            val original = laborPendiente().copy(id = 8L, pendiente = false)
+            val respuesta = LaboresRepositorioRemoto(cliente).editar(original)
+            assertEquals(8L, respuesta.id)
+            assertEquals("Control de calidad", respuesta.observacion)
+        } finally {
+            cliente.close()
+        }
+    }
+
+    @Test
+    fun servidorNiegaEdicionSinPrivilegioCon403() = runTest {
+        val motor = MockEngine {
+            respond(
+                content = """{"message":"No tienes el privilegio requerido"}""",
+                status = HttpStatusCode.Forbidden,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        val cliente = crearCliente(motor)
+        try {
+            assertFailsWith<ErrorApi.SinPrivilegio> {
+                LaboresRepositorioRemoto(cliente).editar(laborPendiente().copy(id = 8L))
+            }
+        } finally {
+            cliente.close()
+        }
+    }
+
+    @Test
+    fun backendRechazaEdicionDeCampaniaCerradaCon409() = runTest {
+        val motor = MockEngine {
+            respond(
+                content = """{"message":"Campaña cerrada"}""",
+                status = HttpStatusCode.Conflict,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+        val cliente = crearCliente(motor)
+        try {
+            assertFailsWith<ErrorApi.Conflicto> {
+                LaboresRepositorioRemoto(cliente).editar(laborPendiente().copy(id = 8L))
+            }
+        } finally {
+            cliente.close()
+        }
+    }
 }
