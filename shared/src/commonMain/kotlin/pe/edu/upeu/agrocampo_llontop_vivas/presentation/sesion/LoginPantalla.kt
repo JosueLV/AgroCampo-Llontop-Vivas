@@ -24,7 +24,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LoginPantalla(
     alIngresar: (String, String) -> Unit,
-    avisoServidor: String? = null
+    avisoServidor: String? = null,
+            habilitado: Boolean = true
 ) {
     var usuario by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
@@ -87,6 +88,7 @@ fun LoginPantalla(
         Spacer(modifier = Modifier.height(20.dp))
 
         Button(
+            enabled = habilitado,
             onClick = {
                 errorLocal = LoginValidador.validar(usuario, contrasena)
 
