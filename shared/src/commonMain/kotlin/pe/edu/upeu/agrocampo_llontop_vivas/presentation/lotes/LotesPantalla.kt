@@ -67,6 +67,16 @@ fun LotesPantalla(
         )
     }
 
+    estado.laborEditando?.let { labor ->
+        EditarLaborDialog(
+            labor = labor,
+            guardando = estado.guardandoEdicion,
+            errorServidor = estado.errorEdicion,
+            alCerrar = viewModel::cancelarEdicion,
+            alGuardar = viewModel::guardarEdicion
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -208,7 +218,11 @@ fun LotesPantalla(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(estado.labores, key = { it.id }) { labor ->
-                    TarjetaLabor(labor)
+                    TarjetaLabor(
+                        labor = labor,
+                        puedeEditar = viewModel.puedeEditarLabor(labor),
+                        alEditar = { viewModel.comenzarEdicion(labor) }
+                    )
                 }
             }
         }
@@ -284,7 +298,11 @@ private fun TarjetaLote(lote: Lote, alSeleccionar: () -> Unit) {
 }
 
 @Composable
-private fun TarjetaLabor(labor: Labor) {
+private fun TarjetaLabor(
+    labor: Labor,
+    puedeEditar: Boolean,
+    alEditar: () -> Unit
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text("${labor.tipo.name} · ${labor.fecha}",
@@ -297,6 +315,15 @@ private fun TarjetaLabor(labor: Labor) {
             }
             if (labor.pendiente) {
                 Text("Pendiente de sincronizar", color = MaterialTheme.colorScheme.error)
+            }
+            if (puedeEditar) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = alEditar,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("✎  Editar")
+                }
             }
         }
     }
@@ -366,6 +393,96 @@ private fun NuevaLaborDialog(
         },
         dismissButton = {
             TextButton(onClick = alCerrar) { Text("Cancelar") }
+        }
+    )
+}
+
+/** Conserva el formulario abierto hasta que el backend confirma la corrección. */
+@Composable
+private fun EditarLaborDialog(
+    labor: Labor,
+    guardando: Boolean,
+    errorServidor: String?,
+    alCerrar: () -> Unit,
+    alGuardar: (TipoLabor, String, String, String) -> String?
+) {
+    var tipo by remember(labor.id) { mutableStateOf(labor.tipo) }
+    var fecha by remember(labor.id) { mutableStateOf(labor.fecha) }
+    var cantidad by remember(labor.id) { mutableStateOf(labor.cantidad.toString()) }
+    var observacion by remember(labor.id) { mutableStateOf(labor.observacion) }
+    var errorLocal by remember(labor.id) { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = { if (!guardando) alCerrar() },
+        title = { Text("Editar labor #${labor.id}") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text("Tipo de labor", style = MaterialTheme.typography.titleSmall)
+                TipoLabor.entries.forEach { opcion ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = tipo == opcion,
+                            enabled = !guardando,
+                            onClick = { tipo = opcion; errorLocal = null }
+                        )
+                        Text(opcion.name)
+                    }
+                }
+                OutlinedTextField(
+                    value = fecha,
+                    onValueChange = { fecha = it; errorLocal = null },
+                    enabled = !guardando,
+                    label = { Text("Fecha (AAAA-MM-DD)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = cantidad,
+                    onValueChange = { cantidad = it; errorLocal = null },
+                    enabled = !guardando,
+                    label = { Text("Cantidad") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = observacion,
+                    onValueChange = { observacion = it; errorLocal = null },
+                    enabled = !guardando,
+                    label = { Text("Observación (opcional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                errorLocal?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
+                errorServidor?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
+                if (guardando) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text("  Guardando en AgroAPI...")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    errorLocal = alGuardar(tipo, fecha, cantidad, observacion)
+                },
+                enabled = !guardando,
+                colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)
+            ) {
+                Text("Guardar cambios")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = alCerrar,
+                enabled = !guardando
+            ) {
+                Text("Cancelar")
+            }
         }
     )
 }
