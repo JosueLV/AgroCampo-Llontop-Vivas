@@ -143,21 +143,30 @@ fun LotesPantalla(
             Text("Valle: ${seleccionado.valle}  |  Cultivo: ${seleccionado.cultivo}")
             Spacer(modifier = Modifier.height(10.dp))
 
-            Button(
-                onClick = viewModel::actualizarLabores,
-                enabled = !estado.sincronizandoLabores,
-                colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)
+            val puedeRegistrar = viewModel.puedeRegistrarEn(seleccionado)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Actualizar labores")
-            }
-            if (viewModel.puedeRegistrarEn(seleccionado)) {
-                Button(
-                    onClick = { mostrarFormulario = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)
+                OutlinedButton(
+                    onClick = viewModel::actualizarLabores,
+                    enabled = !estado.sincronizandoLabores,
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
-                    Text("Nueva labor")
+                    Text("↻  Actualizar", color = VerdeAgro)
+                }
+                if (puedeRegistrar) {
+                    Button(
+                        onClick = { mostrarFormulario = true },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)
+                    ) {
+                        Text("＋  Nueva labor")
+                    }
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
             if (estado.sincronizandoLabores) {
                 Text("Consultando AgroAPI...")
             }
