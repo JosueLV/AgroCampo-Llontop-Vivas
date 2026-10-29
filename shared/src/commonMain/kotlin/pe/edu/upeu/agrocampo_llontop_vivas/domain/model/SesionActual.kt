@@ -9,6 +9,12 @@ class SesionActual {
     val token: String?
         get() = sesion?.token
 
+    val usuario: String?
+        get() = sesion?.usuario
+
+    fun tienePrivilegio(privilegio: String): Boolean =
+        sesion?.privilegios?.contains(privilegio) == true
+
     fun abrir(nuevaSesion: Sesion) {
         sesion = nuevaSesion
     }

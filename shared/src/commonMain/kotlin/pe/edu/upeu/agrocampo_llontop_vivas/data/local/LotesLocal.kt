@@ -87,4 +87,34 @@ class LotesLocal(private val base: AgroDb) {
             }
         }
     }
+    /**
+     * Identificador negativo exclusivo para registros aún no enviados al backend.
+     * Nunca colisiona con los identificadores positivos del servidor.
+     */
+    suspend fun crearLaborPendiente(
+        loteId: Long,
+        tipo: TipoLabor,
+        fecha: String,
+        responsable: String,
+        cantidad: Double,
+        observacion: String
+    ): Long = withContext(Dispatchers.Default) {
+        var nuevoId = -1L
+        base.transaction {
+            val menorId = base.agroDbQueries.siguienteIdLocal().executeAsOne()
+            nuevoId = siguienteIdTemporal(menorId)
+            base.agroDbQueries.guardarLabor(
+                id = nuevoId,
+                loteId = loteId,
+                tipo = tipo.name,
+                fecha = fecha,
+                responsable = responsable,
+                cantidad = cantidad,
+                observacion = observacion,
+                pendiente = 1L
+            )
+        }
+        nuevoId
+    }
+
 }

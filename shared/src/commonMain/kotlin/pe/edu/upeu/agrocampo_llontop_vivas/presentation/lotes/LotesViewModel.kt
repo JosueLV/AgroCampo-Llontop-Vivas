@@ -13,6 +13,8 @@ import pe.edu.upeu.agrocampo_llontop_vivas.data.repository.LotesRepositorioRemot
 import pe.edu.upeu.agrocampo_llontop_vivas.data.repository.LaboresRepositorioRemoto
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Labor
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Lote
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.TipoLabor
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.SesionActual
 
 data class LotesUiState(
     val lotes: List<Lote> = emptyList(),
@@ -27,7 +29,8 @@ data class LotesUiState(
 class LotesViewModel(
     private val local: LotesLocal,
     private val remoto: LotesRepositorioRemoto,
-    private val laboresRemoto: LaboresRepositorioRemoto
+    private val laboresRemoto: LaboresRepositorioRemoto,
+    private val sesionActual: SesionActual
 ) : ViewModel() {
 
     private val _estado = MutableStateFlow(LotesUiState())
@@ -102,5 +105,49 @@ class LotesViewModel(
                 _estado.update { it.copy(sincronizandoLabores = false) }
             }
         }
+    }
+
+    fun puedeRegistrarEn(lote: Lote): Boolean =
+        !lote.campaniaCerrada && sesionActual.tienePrivilegio("LABOR_CREAR")
+
+    /**
+     * Valida datos en la pantalla y almacena una labor pendiente sin requerir internet.
+     * Devuelve null si el formulario es válido, o un mensaje visible si hay error.
+     */
+    fun registrarLaborPendiente(
+        tipo: TipoLabor,
+        fecha: String,
+        cantidadTexto: String,
+        observacion: String
+    ): String? {
+        val lote = _estado.value.loteSeleccionado ?: return "Selecciona un lote."
+        if (!puedeRegistrarEn(lote)) return "No tienes permiso o la campaña está cerrada."
+        val fechaFinal = fecha.trim()
+        val formatoFecha = Regex("""\d{4}-\d{2}-\d{2}""")
+        if (!formatoFecha.matches(fechaFinal)) return "Escribe la fecha AAAA-MM-DD."
+        val cantidad = cantidadTexto.replace(',', '.').toDoubleOrNull()
+        if (cantidad == null || !cantidad.isFinite() || cantidad <= 0.0) {
+            return "La cantidad debe ser mayor que cero."
+        }
+        if (observacion.length > 500) return "La observación admite máximo 500 caracteres."
+        val usuario = sesionActual.usuario ?: return "Debes iniciar sesión."
+
+        viewModelScope.launch {
+            try {
+                local.crearLaborPendiente(
+                    loteId = lote.id,
+                    tipo = tipo,
+                    fecha = fechaFinal,
+                    responsable = usuario,
+                    cantidad = cantidad,
+                    observacion = observacion.trim()
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _estado.update { it.copy(errorLabores = "No se pudo guardar localmente: ${e.message}") }
+            }
+        }
+        return null
     }
 }
