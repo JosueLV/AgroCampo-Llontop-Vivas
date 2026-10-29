@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.sqldelight)
 }
 
 kotlin {
@@ -41,6 +42,10 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
+            implementation(libs.sqldelight.android.driver)
+        }
+        iosMain.dependencies {
+            implementation(libs.sqldelight.native.driver)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -61,6 +66,8 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
 
             implementation(libs.coroutines.core)
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.sqldelight.coroutines.extensions)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -72,6 +79,14 @@ kotlin {
         }
     }
 }
+sqldelight {
+    databases {
+        create("AgroDb") {
+            packageName.set("pe.edu.upeu.agrocampo_llontop_vivas.db")
+        }
+    }
+}
+
 compose.resources {
     packageOfResClass =
         "pe.edu.upeu.agrocampo_llontop_vivas.resources"
