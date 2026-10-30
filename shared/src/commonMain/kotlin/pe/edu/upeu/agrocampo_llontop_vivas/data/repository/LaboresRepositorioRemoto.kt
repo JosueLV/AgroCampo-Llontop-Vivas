@@ -3,6 +3,7 @@ package pe.edu.upeu.agrocampo_llontop_vivas.data.repository
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -81,6 +82,33 @@ class LaboresRepositorioRemoto(private val cliente: HttpClient) {
             }
             return when (respuesta.status.value) {
                 in 200..299 -> respuesta.body<LaborDto>().aDominio()
+                400 -> throw ErrorApi.Validacion()
+                401 -> throw ErrorApi.NoAutorizado()
+                403 -> throw ErrorApi.SinPrivilegio()
+                404 -> throw ErrorApi.NoEncontrado()
+                409 -> throw ErrorApi.Conflicto()
+                else -> throw ErrorApi.Servidor()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ErrorApi) {
+            throw e
+        } catch (e: HttpRequestTimeoutException) {
+            throw ErrorApi.TiempoAgotado()
+        } catch (e: Exception) {
+            throw ErrorApi.SinConexion()
+        }
+    }
+
+    /**
+     * HTTP 204 no tiene cuerpo. SQLDelight se actualiza solo si el servicio confirma.
+     */
+    suspend fun eliminar(id: Long) {
+        if (id <= 0L) throw ErrorApi.Validacion()
+        try {
+            val respuesta = cliente.delete("${ApiConfig.BASE_URL}/labores/$id")
+            when (respuesta.status.value) {
+                204 -> Unit
                 400 -> throw ErrorApi.Validacion()
                 401 -> throw ErrorApi.NoAutorizado()
                 403 -> throw ErrorApi.SinPrivilegio()
