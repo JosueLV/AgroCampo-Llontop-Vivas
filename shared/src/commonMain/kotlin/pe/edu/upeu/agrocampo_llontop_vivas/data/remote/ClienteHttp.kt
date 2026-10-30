@@ -12,9 +12,12 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
+/** URL según el destino. Android Emulator usa 10.0.2.2 para llegar al Windows anfitrión. */
 object ApiConfig {
-    const val BASE_URL = "http://127.0.0.1:8080/api/v1"
+    val BASE_URL: String get() = urlBaseAgroApi()
 }
+
+internal expect fun urlBaseAgroApi(): String
 
 fun crearClienteHttp(sesionActual: SesionActual): HttpClient {
     return HttpClient {
