@@ -13,6 +13,7 @@ import io.ktor.http.contentType
 import io.ktor.client.request.parameter
 import kotlinx.coroutines.CancellationException
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.ApiConfig
+import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.lanzarErrorApi
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.dto.CrearLaborDto
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.dto.EditarLaborDto
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.dto.LaborDto
@@ -43,12 +44,7 @@ class LaboresRepositorioRemoto(private val cliente: HttpClient) {
             }
             return when (respuesta.status.value) {
                 in 200..299 -> respuesta.body<LaborDto>().aDominio()
-                400 -> throw ErrorApi.Validacion()
-                401 -> throw ErrorApi.NoAutorizado()
-                403 -> throw ErrorApi.SinPrivilegio()
-                404 -> throw ErrorApi.NoEncontrado()
-                409 -> throw ErrorApi.Conflicto()
-                else -> throw ErrorApi.Servidor()
+                else -> respuesta.lanzarErrorApi()
             }
         } catch (e: CancellationException) {
             throw e
@@ -82,12 +78,7 @@ class LaboresRepositorioRemoto(private val cliente: HttpClient) {
             }
             return when (respuesta.status.value) {
                 in 200..299 -> respuesta.body<LaborDto>().aDominio()
-                400 -> throw ErrorApi.Validacion()
-                401 -> throw ErrorApi.NoAutorizado()
-                403 -> throw ErrorApi.SinPrivilegio()
-                404 -> throw ErrorApi.NoEncontrado()
-                409 -> throw ErrorApi.Conflicto()
-                else -> throw ErrorApi.Servidor()
+                else -> respuesta.lanzarErrorApi()
             }
         } catch (e: CancellationException) {
             throw e
@@ -109,12 +100,7 @@ class LaboresRepositorioRemoto(private val cliente: HttpClient) {
             val respuesta = cliente.delete("${ApiConfig.BASE_URL}/labores/$id")
             when (respuesta.status.value) {
                 204 -> Unit
-                400 -> throw ErrorApi.Validacion()
-                401 -> throw ErrorApi.NoAutorizado()
-                403 -> throw ErrorApi.SinPrivilegio()
-                404 -> throw ErrorApi.NoEncontrado()
-                409 -> throw ErrorApi.Conflicto()
-                else -> throw ErrorApi.Servidor()
+                else -> respuesta.lanzarErrorApi()
             }
         } catch (e: CancellationException) {
             throw e
@@ -144,12 +130,7 @@ class LaboresRepositorioRemoto(private val cliente: HttpClient) {
                         ultima = datos.ultima || pagina + 1 >= datos.totalPaginas
                         pagina++
                     }
-                    400 -> throw ErrorApi.Validacion()
-                    401 -> throw ErrorApi.NoAutorizado()
-                    403 -> throw ErrorApi.SinPrivilegio()
-                    404 -> throw ErrorApi.NoEncontrado()
-                    409 -> throw ErrorApi.Conflicto()
-                    else -> throw ErrorApi.Servidor()
+                    else -> respuesta.lanzarErrorApi()
                 }
             }
             return resultado
