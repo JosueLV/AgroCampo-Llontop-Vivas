@@ -140,6 +140,11 @@ class LotesLocal(private val base: AgroDb) {
         }.sortedByDescending { it.id } // -1 antes de -2: orden de creación.
     }
 
+    /** Elimina de la fuente observable solo después del 204 del backend. */
+    suspend fun eliminarLabor(id: Long) = withContext(Dispatchers.Default) {
+        base.agroDbQueries.eliminarLabor(id)
+    }
+
     fun observarNumeroPendientes(): Flow<Int> =
         base.agroDbQueries.observarPendientes()
             .asFlow()

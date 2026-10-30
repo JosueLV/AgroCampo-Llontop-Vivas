@@ -61,6 +61,8 @@ fun LotesPantalla(
 ) {
     val estado by viewModel.estado.collectAsState()
     var mostrarFormulario by remember { mutableStateOf(false) }
+    var laborPorEliminar by remember { mutableStateOf<Labor?>(null) }
+    var lotePorCerrar by remember { mutableStateOf<Lote?>(null) }
 
     if (mostrarFormulario && estado.loteSeleccionado != null) {
         NuevaLaborDialog(
@@ -76,6 +78,45 @@ fun LotesPantalla(
             errorServidor = estado.errorEdicion,
             alCerrar = viewModel::cancelarEdicion,
             alGuardar = viewModel::guardarEdicionConJornales
+        )
+    }
+
+    laborPorEliminar?.let { labor ->
+        AlertDialog(
+            onDismissRequest = { laborPorEliminar = null },
+            title = { Text("Eliminar labor #${labor.id}") },
+            text = { Text("¿Eliminar definitivamente esta labor del servidor? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.eliminarLabor(labor)
+                        laborPorEliminar = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { laborPorEliminar = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    lotePorCerrar?.let { lote ->
+        AlertDialog(
+            onDismissRequest = { lotePorCerrar = null },
+            title = { Text("Cerrar campaña") },
+            text = { Text("¿Cerrar la campaña del lote ${lote.codigo}? El servicio exige una cosecha registrada.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.cerrarCampania()
+                        lotePorCerrar = null
+                    }
+                ) { Text("Confirmar cierre") }
+            },
+            dismissButton = {
+                TextButton(onClick = { lotePorCerrar = null }) { Text("Cancelar") }
+            }
         )
     }
 
@@ -181,6 +222,14 @@ fun LotesPantalla(
             Text("${seleccionado.codigo} · ${seleccionado.nombre}",
                 style = MaterialTheme.typography.titleMedium, color = VerdeAgro)
             Text("Valle: ${seleccionado.valle}  |  Cultivo: ${seleccionado.cultivo}")
+            if (viewModel.puedeCerrarCampania(seleccionado)) {
+                OutlinedButton(
+                    onClick = { lotePorCerrar = seleccionado },
+                    enabled = !estado.cerrandoCampania
+                ) {
+                    Text(if (estado.cerrandoCampania) "Cerrando campaña..." else "Cerrar campaña")
+                }
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             val puedeRegistrar = viewModel.puedeRegistrarEn(seleccionado)
@@ -214,6 +263,9 @@ fun LotesPantalla(
                 Text("Datos locales disponibles. $error",
                     color = MaterialTheme.colorScheme.error)
             }
+            estado.errorOperacion?.let { error ->
+                Text(error, color = MaterialTheme.colorScheme.error)
+            }
             if (estado.labores.isEmpty() && !estado.sincronizandoLabores) {
                 Text("Este lote todavía no tiene labores guardadas.",
                     modifier = Modifier.padding(top = 12.dp))
@@ -227,7 +279,10 @@ fun LotesPantalla(
                     TarjetaLabor(
                         labor = labor,
                         puedeEditar = viewModel.puedeEditarLabor(labor),
-                        alEditar = { viewModel.comenzarEdicion(labor) }
+                        puedeEliminar = viewModel.puedeEliminarLabor(labor),
+                        eliminando = estado.eliminandoLaborId == labor.id,
+                        alEditar = { viewModel.comenzarEdicion(labor) },
+                        alEliminar = { laborPorEliminar = labor }
                     )
                 }
             }
@@ -322,7 +377,10 @@ private fun TarjetaLote(lote: Lote, pendientes: Int, alSeleccionar: () -> Unit) 
 private fun TarjetaLabor(
     labor: Labor,
     puedeEditar: Boolean,
-    alEditar: () -> Unit
+    puedeEliminar: Boolean,
+    eliminando: Boolean,
+    alEditar: () -> Unit,
+    alEliminar: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -338,13 +396,29 @@ private fun TarjetaLabor(
             if (labor.pendiente) {
                 Text("Pendiente de sincronizar", color = MaterialTheme.colorScheme.error)
             }
-            if (puedeEditar) {
+            if (puedeEditar || puedeEliminar) {
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = alEditar,
-                    modifier = Modifier.align(Alignment.End)
+                Row(
+                    modifier = Modifier.align(Alignment.End),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("✎  Editar")
+                    if (puedeEditar) {
+                        OutlinedButton(onClick = alEditar, enabled = !eliminando) {
+                            Text("✎  Editar")
+                        }
+                    }
+                    if (puedeEliminar) {
+                        Button(
+                            onClick = alEliminar,
+                            enabled = !eliminando,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text(if (eliminando) "Eliminando..." else "Eliminar")
+                        }
+                    }
                 }
             }
         }

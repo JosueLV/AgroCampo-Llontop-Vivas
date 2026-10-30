@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.get
+import io.ktor.client.request.post
 import io.ktor.client.request.parameter
 import kotlinx.coroutines.CancellationException
 import pe.edu.upeu.agrocampo_llontop_vivas.data.remote.ApiConfig
@@ -14,6 +15,31 @@ import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.ErrorApi
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Lote
 
 class LotesRepositorioRemoto(private val cliente: HttpClient) {
+
+    /** El backend exige CAMPANIA_CERRAR y al menos una cosecha. */
+    suspend fun cerrarCampania(loteId: Long): Lote {
+        if (loteId <= 0L) throw ErrorApi.Validacion()
+        try {
+            val respuesta = cliente.post("${ApiConfig.BASE_URL}/lotes/$loteId/cerrar-campania")
+            return when (respuesta.status.value) {
+                in 200..299 -> respuesta.body<LoteDto>().aDominio()
+                400 -> throw ErrorApi.Validacion()
+                401 -> throw ErrorApi.NoAutorizado()
+                403 -> throw ErrorApi.SinPrivilegio()
+                404 -> throw ErrorApi.NoEncontrado()
+                409 -> throw ErrorApi.Conflicto()
+                else -> throw ErrorApi.Servidor()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ErrorApi) {
+            throw e
+        } catch (e: HttpRequestTimeoutException) {
+            throw ErrorApi.TiempoAgotado()
+        } catch (e: Exception) {
+            throw ErrorApi.SinConexion()
+        }
+    }
 
     suspend fun listarTodos(): List<Lote> {
         try {
