@@ -3,6 +3,9 @@ package pe.edu.upeu.agrocampo_llontop_vivas
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
@@ -25,7 +28,10 @@ class MensajesErrorServidorTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json")
             )
         }
-        val http = HttpClient(motor) { expectSuccess = false }
+        val http = HttpClient(motor) {
+            expectSuccess = false
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
         try {
             val labor = pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Labor(
                 id = 31, loteId = 4,
@@ -50,7 +56,10 @@ class MensajesErrorServidorTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json")
             )
         }
-        val http = HttpClient(motor) { expectSuccess = false }
+        val http = HttpClient(motor) {
+            expectSuccess = false
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
         try {
             val error = assertFailsWith<ErrorApi.Conflicto> {
                 LotesRepositorioRemoto(http).cerrarCampania(4)
