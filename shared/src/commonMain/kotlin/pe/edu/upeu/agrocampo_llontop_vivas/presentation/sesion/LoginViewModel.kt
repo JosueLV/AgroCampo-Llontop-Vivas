@@ -24,6 +24,14 @@ class LoginViewModel(
     private val _estado = MutableStateFlow(LoginUiState())
     val estado = _estado.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            sesionActual.sesionFlujo.collect { sesion ->
+                _estado.value = _estado.value.copy(sesion = sesion)
+            }
+        }
+    }
+
     fun ingresar(usuario: String, contrasena: String) {
         viewModelScope.launch {
             _estado.value = LoginUiState(cargando = true)

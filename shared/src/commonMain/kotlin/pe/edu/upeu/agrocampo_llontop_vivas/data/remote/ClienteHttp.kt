@@ -2,7 +2,9 @@ package pe.edu.upeu.agrocampo_llontop_vivas.data.remote
 
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.client.request.header
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.SesionActual
 import io.ktor.client.plugins.HttpTimeout
@@ -21,6 +23,16 @@ fun crearClienteHttp(sesionActual: SesionActual): HttpClient {
         defaultRequest {
             sesionActual.token?.let { token ->
                 header(HttpHeaders.Authorization, "Bearer $token")
+            }
+        }
+
+        HttpResponseValidator {
+            validateResponse { respuesta ->
+                if (respuesta.status == HttpStatusCode.Unauthorized &&
+                    !respuesta.call.request.url.encodedPath.endsWith("/auth/login")
+                ) {
+                    sesionActual.cerrar()
+                }
             }
         }
 

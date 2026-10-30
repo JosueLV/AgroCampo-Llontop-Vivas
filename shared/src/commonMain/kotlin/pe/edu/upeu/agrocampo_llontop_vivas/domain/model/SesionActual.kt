@@ -1,25 +1,32 @@
 package pe.edu.upeu.agrocampo_llontop_vivas.domain.model
 
-/**
- * Sesión activa en memoria. El almacenamiento cifrado se integrará en una etapa posterior.
- */
-class SesionActual {
-    private var sesion: Sesion? = null
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+/** Estado observable de la sesión; el almacenamiento persistente es inyectado. */
+class SesionActual(private val almacen: AlmacenSesion = AlmacenSesionVolatil()) {
+    private val _sesionFlujo = MutableStateFlow(almacen.recuperar())
+    val sesionFlujo: StateFlow<Sesion?> = _sesionFlujo
+
+    val sesion: Sesion?
+        get() = _sesionFlujo.value
 
     val token: String?
-        get() = sesion?.token
+        get() = _sesionFlujo.value?.token
 
     val usuario: String?
-        get() = sesion?.usuario
+        get() = _sesionFlujo.value?.usuario
 
     fun tienePrivilegio(privilegio: String): Boolean =
-        sesion?.privilegios?.contains(privilegio) == true
+        _sesionFlujo.value?.privilegios?.contains(privilegio) == true
 
     fun abrir(nuevaSesion: Sesion) {
-        sesion = nuevaSesion
+        almacen.guardar(nuevaSesion)
+        _sesionFlujo.value = nuevaSesion
     }
 
     fun cerrar() {
-        sesion = null
+        almacen.borrar()
+        _sesionFlujo.value = null
     }
 }
