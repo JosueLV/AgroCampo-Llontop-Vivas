@@ -21,7 +21,7 @@ class LoginViewModel(
     private val sesionActual: SesionActual
 ) : ViewModel() {
 
-    private val _estado = MutableStateFlow(LoginUiState())
+    private val _estado = MutableStateFlow(LoginUiState(sesion = sesionActual.sesion))
     val estado = _estado.asStateFlow()
 
     fun ingresar(usuario: String, contrasena: String) {

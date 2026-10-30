@@ -13,16 +13,18 @@ import org.koin.compose.KoinApplication
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.dsl.koinConfiguration
 import pe.edu.upeu.agrocampo_llontop_vivas.di.appModule
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.AlmacenSesion
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.AlmacenSesionVolatil
 import pe.edu.upeu.agrocampo_llontop_vivas.di.crearModuloLotes
 import pe.edu.upeu.agrocampo_llontop_vivas.presentation.lotes.LotesPantalla
 import pe.edu.upeu.agrocampo_llontop_vivas.presentation.sesion.LoginPantalla
 import pe.edu.upeu.agrocampo_llontop_vivas.presentation.sesion.LoginViewModel
 
 @Composable
-fun App(driver: SqlDriver) {
+fun App(driver: SqlDriver, almacenSesion: AlmacenSesion = AlmacenSesionVolatil()) {
     KoinApplication(
         configuration = koinConfiguration {
-            modules(appModule, crearModuloLotes(driver))
+            modules(appModule(almacenSesion), crearModuloLotes(driver))
         }
     ) {
         val loginViewModel = koinViewModel<LoginViewModel>()

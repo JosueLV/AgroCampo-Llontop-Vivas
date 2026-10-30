@@ -1,25 +1,28 @@
 package pe.edu.upeu.agrocampo_llontop_vivas.domain.model
 
-/**
- * Sesión activa en memoria. El almacenamiento cifrado se integrará en una etapa posterior.
- */
-class SesionActual {
-    private var sesion: Sesion? = null
+/** Estado de la sesión y punto único para guardar o borrar las credenciales. */
+class SesionActual(private val almacen: AlmacenSesion = AlmacenSesionVolatil()) {
+    private var activa: Sesion? = almacen.recuperar()
+
+    val sesion: Sesion?
+        get() = activa
 
     val token: String?
-        get() = sesion?.token
+        get() = activa?.token
 
     val usuario: String?
-        get() = sesion?.usuario
+        get() = activa?.usuario
 
     fun tienePrivilegio(privilegio: String): Boolean =
-        sesion?.privilegios?.contains(privilegio) == true
+        activa?.privilegios?.contains(privilegio) == true
 
     fun abrir(nuevaSesion: Sesion) {
-        sesion = nuevaSesion
+        almacen.guardar(nuevaSesion)
+        activa = nuevaSesion
     }
 
     fun cerrar() {
-        sesion = null
+        almacen.borrar()
+        activa = null
     }
 }
