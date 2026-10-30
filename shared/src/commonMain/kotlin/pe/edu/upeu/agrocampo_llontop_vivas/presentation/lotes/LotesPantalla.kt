@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Card
+import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -155,7 +157,11 @@ fun LotesPantalla(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(estado.lotes, key = { it.id }) { lote ->
-                    TarjetaLote(lote, alSeleccionar = { viewModel.abrirLote(lote) })
+                    TarjetaLote(
+                        lote = lote,
+                        pendientes = estado.pendientesPorLote[lote.id] ?: 0,
+                        alSeleccionar = { viewModel.abrirLote(lote) }
+                    )
                 }
             }
         } else {
@@ -280,7 +286,7 @@ private fun ControlesFiltrosLotes(
 }
 
 @Composable
-private fun TarjetaLote(lote: Lote, alSeleccionar: () -> Unit) {
+private fun TarjetaLote(lote: Lote, pendientes: Int, alSeleccionar: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = alSeleccionar)) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text("${lote.codigo} · ${lote.nombre}",
@@ -292,6 +298,21 @@ private fun TarjetaLote(lote: Lote, alSeleccionar: () -> Unit) {
                 if (lote.campaniaCerrada) "Campaña cerrada" else "Campaña abierta",
                 color = if (lote.campaniaCerrada) MaterialTheme.colorScheme.error else VerdeAgro
             )
+            if (pendientes > 0) {
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.padding(top = 6.dp)
+                ) {
+                    Text(
+                        text = "Pendientes: $pendientes",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
             Text("Toca para ver labores", style = MaterialTheme.typography.labelSmall)
         }
     }

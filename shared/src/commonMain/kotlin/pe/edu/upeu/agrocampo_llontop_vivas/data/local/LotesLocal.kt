@@ -147,6 +147,18 @@ class LotesLocal(private val base: AgroDb) {
             .map { it.size }
 
     /**
+     * SC-D: emite el número de labores pendientes de cada lote cada vez
+     * que SQLDelight observa un INSERT, UPDATE o DELETE sobre la tabla labor.
+     */
+    fun observarPendientesPorLote(): Flow<Map<Long, Int>> =
+        base.agroDbQueries.contarPendientesPorLote()
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { filas ->
+                filas.associate { fila -> fila.loteId to fila.totalPendientes.toInt() }
+            }
+
+    /**
      * Transacción atómica: retira el ID temporal y guarda el ID definitivo
      * solamente después de recibir la confirmación del backend.
      */
