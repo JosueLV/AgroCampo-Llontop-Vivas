@@ -35,7 +35,10 @@ data class LotesUiState(
     val errorLabores: String? = null,
     val laborEditando: Labor? = null,
     val guardandoEdicion: Boolean = false,
-    val errorEdicion: String? = null
+    val errorEdicion: String? = null,
+    val eliminandoLaborId: Long? = null,
+    val cerrandoCampania: Boolean = false,
+    val errorOperacion: String? = null
 )
 
 class LotesViewModel(
@@ -129,7 +132,8 @@ class LotesViewModel(
         observacionLabores?.cancel()
         _estado.update {
             it.copy(loteSeleccionado = lote, labores = emptyList(), errorLabores = null,
-                laborEditando = null, guardandoEdicion = false, errorEdicion = null)
+                laborEditando = null, guardandoEdicion = false, errorEdicion = null,
+                errorOperacion = null)
         }
         observacionLabores = viewModelScope.launch {
             local.observarLabores(lote.id).collect { labores ->
@@ -181,6 +185,65 @@ class LotesViewModel(
             !labor.pendiente &&
             labor.id > 0L &&
             sesionActual.tienePrivilegio("LABOR_EDITAR")
+    }
+
+    /** El servicio vuelve a verificar LABOR_ELIMINAR; ocultar el botón no es seguridad. */
+    fun puedeEliminarLabor(labor: Labor): Boolean {
+        val lote = _estado.value.loteSeleccionado ?: return false
+        return labor.loteId == lote.id &&
+            !labor.pendiente && labor.id > 0L &&
+            sesionActual.tienePrivilegio("LABOR_ELIMINAR")
+    }
+
+    fun eliminarLabor(labor: Labor) {
+        if (!puedeEliminarLabor(labor)) {
+            _estado.update { it.copy(errorOperacion = "No tienes permiso para eliminar esta labor.") }
+            return
+        }
+        if (_estado.value.eliminandoLaborId != null || _estado.value.cerrandoCampania) return
+        viewModelScope.launch {
+            _estado.update { it.copy(eliminandoLaborId = labor.id, errorOperacion = null) }
+            try {
+                laboresRemoto.eliminar(labor.id)
+                local.eliminarLabor(labor.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _estado.update {
+                    it.copy(errorOperacion = e.message ?: "No fue posible eliminar la labor.")
+                }
+            } finally {
+                _estado.update { it.copy(eliminandoLaborId = null) }
+            }
+        }
+    }
+
+    fun puedeCerrarCampania(lote: Lote): Boolean =
+        !lote.campaniaCerrada && sesionActual.tienePrivilegio("CAMPANIA_CERRAR")
+
+    fun cerrarCampania() {
+        val lote = _estado.value.loteSeleccionado ?: return
+        if (!puedeCerrarCampania(lote)) {
+            _estado.update { it.copy(errorOperacion = "No tienes permiso para cerrar la campaña.") }
+            return
+        }
+        if (_estado.value.cerrandoCampania || _estado.value.eliminandoLaborId != null) return
+        viewModelScope.launch {
+            _estado.update { it.copy(cerrandoCampania = true, errorOperacion = null) }
+            try {
+                val cerrada = remoto.cerrarCampania(lote.id)
+                local.guardarLotes(listOf(cerrada))
+                _estado.update { it.copy(loteSeleccionado = cerrada, errorOperacion = null) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _estado.update {
+                    it.copy(errorOperacion = e.message ?: "No se pudo cerrar la campaña.")
+                }
+            } finally {
+                _estado.update { it.copy(cerrandoCampania = false) }
+            }
+        }
     }
 
     fun comenzarEdicion(labor: Labor) {
