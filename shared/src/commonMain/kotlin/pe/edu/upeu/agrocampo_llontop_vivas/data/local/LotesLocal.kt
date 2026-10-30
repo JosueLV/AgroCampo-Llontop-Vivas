@@ -2,6 +2,7 @@ package pe.edu.upeu.agrocampo_llontop_vivas.data.local
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOneOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -144,6 +145,17 @@ class LotesLocal(private val base: AgroDb) {
     suspend fun eliminarLabor(id: Long) = withContext(Dispatchers.Default) {
         base.agroDbQueries.eliminarLabor(id)
     }
+
+    /** Conserva el último instante de sincronización confirmada. */
+    fun observarUltimaSincronizacion(): Flow<String?> =
+        base.agroDbQueries.observarUltimaSincronizacion()
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.Default)
+
+    suspend fun guardarUltimaSincronizacion(instante: String) =
+        withContext(Dispatchers.Default) {
+            base.agroDbQueries.guardarUltimaSincronizacion(instante)
+        }
 
     fun observarNumeroPendientes(): Flow<Int> =
         base.agroDbQueries.observarPendientes()

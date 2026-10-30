@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 import pe.edu.upeu.agrocampo_llontop_vivas.data.local.LotesLocal
 import pe.edu.upeu.agrocampo_llontop_vivas.data.repository.LotesRepositorioRemoto
 import pe.edu.upeu.agrocampo_llontop_vivas.data.repository.LaboresRepositorioRemoto
@@ -28,6 +29,8 @@ data class LotesUiState(
     val sincronizando: Boolean = false,
     val pendientes: Int = 0,
     val pendientesPorLote: Map<Long, Int> = emptyMap(),
+    val ultimaSincronizacion: String? = null,
+    val resumenSincronizacion: String? = null,
     val error: String? = null,
     val loteSeleccionado: Lote? = null,
     val labores: List<Labor> = emptyList(),
@@ -81,6 +84,11 @@ class LotesViewModel(
                 _estado.update { it.copy(pendientesPorLote = conteos) }
             }
         }
+        viewModelScope.launch {
+            local.observarUltimaSincronizacion().collect { fecha ->
+                _estado.update { it.copy(ultimaSincronizacion = fecha) }
+            }
+        }
         actualizar()
     }
 
@@ -101,11 +109,14 @@ class LotesViewModel(
      * Reintenta en orden de creación. Si falla el servidor o la red, el
      * pendiente actual y los siguientes permanecen en SQLDelight.
      */
-    private suspend fun enviarPendientes() {
+    private suspend fun enviarPendientes(): Int {
+        var enviados = 0
         local.obtenerPendientes().forEach { pendiente ->
             val confirmada = laboresRemoto.crear(pendiente)
             local.confirmarLaborSincronizada(pendiente.id, confirmada)
+            enviados++
         }
+        return enviados
     }
 
     fun actualizar() {
@@ -114,8 +125,14 @@ class LotesViewModel(
         viewModelScope.launch {
             _estado.update { it.copy(sincronizando = true, error = null) }
             try {
-                enviarPendientes()
-                local.guardarLotes(remoto.listarTodos())
+                val enviados = enviarPendientes()
+                val recibidos = remoto.listarTodos()
+                local.guardarLotes(recibidos)
+                local.guardarUltimaSincronizacion(Clock.System.now().toString())
+                _estado.update {
+                    it.copy(resumenSincronizacion =
+                        "$enviados enviadas; ${recibidos.size} lotes actualizados")
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -162,8 +179,14 @@ class LotesViewModel(
         viewModelScope.launch {
             _estado.update { it.copy(sincronizandoLabores = true, errorLabores = null) }
             try {
-                enviarPendientes()
-                local.guardarLabores(laboresRemoto.listarPorLote(loteId))
+                val enviados = enviarPendientes()
+                val recibidas = laboresRemoto.listarPorLote(loteId)
+                local.guardarLabores(recibidas)
+                local.guardarUltimaSincronizacion(Clock.System.now().toString())
+                _estado.update {
+                    it.copy(resumenSincronizacion =
+                        "$enviados enviadas; ${recibidas.size} labores actualizadas")
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
