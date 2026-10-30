@@ -27,6 +27,7 @@ data class LotesUiState(
     val busqueda: String = "",
     val sincronizando: Boolean = false,
     val pendientes: Int = 0,
+    val pendientesPorLote: Map<Long, Int> = emptyMap(),
     val error: String? = null,
     val loteSeleccionado: Lote? = null,
     val labores: List<Labor> = emptyList(),
@@ -70,6 +71,11 @@ class LotesViewModel(
         viewModelScope.launch {
             local.observarNumeroPendientes().collect { pendientes ->
                 _estado.update { it.copy(pendientes = pendientes) }
+            }
+        }
+        viewModelScope.launch {
+            local.observarPendientesPorLote().collect { conteos ->
+                _estado.update { it.copy(pendientesPorLote = conteos) }
             }
         }
         actualizar()
