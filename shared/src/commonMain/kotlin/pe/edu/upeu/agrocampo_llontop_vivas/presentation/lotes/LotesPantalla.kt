@@ -71,6 +71,7 @@ fun LotesPantalla(
     }
 
     var mostrarFormulario by remember { mutableStateOf(false) }
+    var mostrarPerfil by remember { mutableStateOf(false) }
     var laborPorEliminar by remember { mutableStateOf<Labor?>(null) }
     var lotePorCerrar by remember { mutableStateOf<Lote?>(null) }
 
@@ -88,6 +89,27 @@ fun LotesPantalla(
             errorServidor = estado.errorEdicion,
             alCerrar = viewModel::cancelarEdicion,
             alGuardar = viewModel::guardarEdicionConJornales
+        )
+    }
+
+    if (mostrarPerfil) {
+        AlertDialog(
+            onDismissRequest = { mostrarPerfil = false },
+            title = { Text("Perfil de usuario") },
+            text = {
+                Column {
+                    Text("Usuario: $usuario")
+                    Text("Rol: $rol")
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Privilegios", fontWeight = FontWeight.Bold)
+                    privilegios.sorted().forEach { privilegio ->
+                        Text("• $privilegio")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarPerfil = false }) { Text("Cerrar") }
+            }
         )
     }
 
@@ -145,7 +167,10 @@ fun LotesPantalla(
                     fontWeight = FontWeight.Bold, color = VerdeAgro)
                 Text("$usuario · $rol", style = MaterialTheme.typography.bodySmall)
             }
-            OutlinedButton(onClick = alCerrarSesion) {
+            TextButton(onClick = { mostrarPerfil = true }) {
+                Text("Perfil")
+            }
+            TextButton(onClick = alCerrarSesion) {
                 Text("Salir")
             }
         }
@@ -156,6 +181,15 @@ fun LotesPantalla(
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
+        }
+        estado.ultimaSincronizacion?.let { ultima ->
+            Text(
+                "Última sincronización: ${ultima.take(19).replace('T', ' ')} UTC",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        estado.resumenSincronizacion?.let { resumen ->
+            Text(resumen, color = VerdeAgro, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(modifier = Modifier.height(16.dp))
         val seleccionado = estado.loteSeleccionado
