@@ -151,6 +151,7 @@ class LotesLocal(private val base: AgroDb) {
         base.agroDbQueries.observarUltimaSincronizacion()
             .asFlow()
             .mapToOneOrNull(Dispatchers.Default)
+            .map { fila -> fila?.ultimaSincronizacion }
 
     suspend fun guardarUltimaSincronizacion(instante: String) =
         withContext(Dispatchers.Default) {
