@@ -14,6 +14,7 @@ import pe.edu.upeu.agrocampo_llontop_vivas.data.local.LotesLocal
 import pe.edu.upeu.agrocampo_llontop_vivas.data.repository.LotesRepositorioRemoto
 import pe.edu.upeu.agrocampo_llontop_vivas.data.repository.LaboresRepositorioRemoto
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Labor
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.ErrorApi
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.Lote
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.TipoLabor
 import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.SesionActual
@@ -39,6 +40,7 @@ data class LotesUiState(
     val laborEditando: Labor? = null,
     val guardandoEdicion: Boolean = false,
     val errorEdicion: String? = null,
+    val erroresCampoEdicion: Map<String, String> = emptyMap(),
     val eliminandoLaborId: Long? = null,
     val cerrandoCampania: Boolean = false,
     val errorOperacion: String? = null
@@ -149,7 +151,7 @@ class LotesViewModel(
         observacionLabores?.cancel()
         _estado.update {
             it.copy(loteSeleccionado = lote, labores = emptyList(), errorLabores = null,
-                laborEditando = null, guardandoEdicion = false, errorEdicion = null,
+                laborEditando = null, guardandoEdicion = false, errorEdicion = null, erroresCampoEdicion = emptyMap(),
                 errorOperacion = null)
         }
         observacionLabores = viewModelScope.launch {
@@ -168,7 +170,7 @@ class LotesViewModel(
         observacionLabores?.cancel()
         _estado.update {
             it.copy(loteSeleccionado = null, labores = emptyList(), errorLabores = null,
-                laborEditando = null, guardandoEdicion = false, errorEdicion = null)
+                laborEditando = null, guardandoEdicion = false, errorEdicion = null, erroresCampoEdicion = emptyMap())
         }
     }
 
@@ -271,12 +273,12 @@ class LotesViewModel(
 
     fun comenzarEdicion(labor: Labor) {
         if (!puedeEditarLabor(labor) || _estado.value.guardandoEdicion) return
-        _estado.update { it.copy(laborEditando = labor, errorEdicion = null) }
+        _estado.update { it.copy(laborEditando = labor, errorEdicion = null, erroresCampoEdicion = emptyMap()) }
     }
 
     fun cancelarEdicion() {
         if (_estado.value.guardandoEdicion) return
-        _estado.update { it.copy(laborEditando = null, errorEdicion = null) }
+        _estado.update { it.copy(laborEditando = null, errorEdicion = null, erroresCampoEdicion = emptyMap()) }
     }
 
     /**
@@ -321,7 +323,7 @@ class LotesViewModel(
         if (observacion.length > 500) return "La observación admite máximo 500 caracteres."
 
         viewModelScope.launch {
-            _estado.update { it.copy(guardandoEdicion = true, errorEdicion = null) }
+            _estado.update { it.copy(guardandoEdicion = true, errorEdicion = null, erroresCampoEdicion = emptyMap()) }
             try {
                 val actualizada = laboresRemoto.editar(
                     labor.copy(
@@ -338,6 +340,7 @@ class LotesViewModel(
                         laborEditando = null,
                         guardandoEdicion = false,
                         errorEdicion = null,
+                        erroresCampoEdicion = emptyMap(),
                         errorLabores = null
                     )
                 }
@@ -347,7 +350,8 @@ class LotesViewModel(
                 _estado.update {
                     it.copy(
                         guardandoEdicion = false,
-                        errorEdicion = e.message ?: "No fue posible guardar la corrección."
+                        errorEdicion = e.message ?: "No fue posible guardar la corrección.",
+                        erroresCampoEdicion = (e as? ErrorApi.Validacion)?.erroresPorCampo.orEmpty()
                     )
                 }
             }

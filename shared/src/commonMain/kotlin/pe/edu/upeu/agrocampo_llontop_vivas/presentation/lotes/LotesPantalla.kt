@@ -87,6 +87,7 @@ fun LotesPantalla(
             labor = labor,
             guardando = estado.guardandoEdicion,
             errorServidor = estado.errorEdicion,
+            erroresServidor = estado.erroresCampoEdicion,
             alCerrar = viewModel::cancelarEdicion,
             alGuardar = viewModel::guardarEdicionConJornales
         )
@@ -503,6 +504,7 @@ private fun NuevaLaborDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (campoLocal(error) == "fecha") AvisoCampo(error)
                 OutlinedTextField(
                     value = cantidad,
                     onValueChange = { cantidad = it; error = null },
@@ -510,6 +512,7 @@ private fun NuevaLaborDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (campoLocal(error) == "cantidad") AvisoCampo(error)
                 OutlinedTextField(
                     value = jornales,
                     onValueChange = { jornales = it; error = null },
@@ -517,15 +520,17 @@ private fun NuevaLaborDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (campoLocal(error) == "cantidadJornales") AvisoCampo(error)
                 OutlinedTextField(
                     value = observacion,
                     onValueChange = { observacion = it; error = null },
                     label = { Text("Observación (opcional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (campoLocal(error) == "observacion") AvisoCampo(error)
                 Text("Se guardará localmente como pendiente hasta sincronizar.",
                     style = MaterialTheme.typography.bodySmall)
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (campoLocal(error) == null) AvisoCampo(error)
             }
         },
         confirmButton = {
@@ -545,12 +550,30 @@ private fun NuevaLaborDialog(
     )
 }
 
+/** Separa el mensaje local por campo sin mezclarlo con fallos de permisos o red. */
+private fun campoLocal(mensaje: String?): String? = when {
+    mensaje?.startsWith("Escribe la fecha") == true -> "fecha"
+    mensaje?.startsWith("La cantidad") == true -> "cantidad"
+    mensaje?.startsWith("Los jornales") == true -> "cantidadJornales"
+    mensaje?.startsWith("La observación") == true -> "observacion"
+    else -> null
+}
+
+@Composable
+private fun AvisoCampo(mensaje: String?) {
+    if (!mensaje.isNullOrBlank()) {
+        Text(mensaje, color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall)
+    }
+}
+
 /** Conserva el formulario abierto hasta que el backend confirma la corrección. */
 @Composable
 private fun EditarLaborDialog(
     labor: Labor,
     guardando: Boolean,
     errorServidor: String?,
+    erroresServidor: Map<String, String>,
     alCerrar: () -> Unit,
     alGuardar: (TipoLabor, String, String, String, String) -> String?
 ) {
@@ -585,6 +608,8 @@ private fun EditarLaborDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                AvisoCampo(erroresServidor["fecha"]
+                    ?: errorLocal.takeIf { campoLocal(it) == "fecha" })
                 OutlinedTextField(
                     value = cantidad,
                     onValueChange = { cantidad = it; errorLocal = null },
@@ -593,6 +618,8 @@ private fun EditarLaborDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                AvisoCampo(erroresServidor["cantidad"]
+                    ?: errorLocal.takeIf { campoLocal(it) == "cantidad" })
                 OutlinedTextField(
                     value = jornales,
                     onValueChange = { jornales = it; errorLocal = null },
@@ -601,6 +628,8 @@ private fun EditarLaborDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                AvisoCampo(erroresServidor["cantidadJornales"]
+                    ?: errorLocal.takeIf { campoLocal(it) == "cantidadJornales" })
                 OutlinedTextField(
                     value = observacion,
                     onValueChange = { observacion = it; errorLocal = null },
@@ -608,12 +637,10 @@ private fun EditarLaborDialog(
                     label = { Text("Observación (opcional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                errorLocal?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error)
-                }
-                errorServidor?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error)
-                }
+                AvisoCampo(erroresServidor["observacion"]
+                    ?: errorLocal.takeIf { campoLocal(it) == "observacion" })
+                if (campoLocal(errorLocal) == null) AvisoCampo(errorLocal)
+                if (erroresServidor.isEmpty()) AvisoCampo(errorServidor)
                 if (guardando) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
