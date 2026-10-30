@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import app.cash.sqldelight.db.SqlDriver
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import org.koin.compose.KoinApplication
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.dsl.koinConfiguration
@@ -21,7 +23,11 @@ import pe.edu.upeu.agrocampo_llontop_vivas.presentation.sesion.LoginPantalla
 import pe.edu.upeu.agrocampo_llontop_vivas.presentation.sesion.LoginViewModel
 
 @Composable
-fun App(driver: SqlDriver, almacenSesion: AlmacenSesion = AlmacenSesionVolatil()) {
+fun App(
+    driver: SqlDriver,
+    almacenSesion: AlmacenSesion = AlmacenSesionVolatil(),
+    eventosConexion: Flow<Unit> = emptyFlow()
+) {
     KoinApplication(
         configuration = koinConfiguration {
             modules(appModule(almacenSesion), crearModuloLotes(driver))
@@ -46,6 +52,8 @@ fun App(driver: SqlDriver, almacenSesion: AlmacenSesion = AlmacenSesionVolatil()
                 LotesPantalla(
                     usuario = sesion.usuario,
                     rol = sesion.rol,
+                    privilegios = sesion.privilegios,
+                    eventosConexion = eventosConexion,
                     alCerrarSesion = loginViewModel::cerrarSesion
                 )
             }

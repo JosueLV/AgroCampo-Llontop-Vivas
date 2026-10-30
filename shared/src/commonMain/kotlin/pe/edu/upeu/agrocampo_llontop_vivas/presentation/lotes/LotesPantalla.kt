@@ -32,6 +32,9 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,10 +59,17 @@ private val VerdeAgro = Color(0xFF14563A)
 fun LotesPantalla(
     usuario: String,
     rol: String,
+    privilegios: Set<String>,
     alCerrarSesion: () -> Unit,
+    eventosConexion: Flow<Unit> = emptyFlow(),
     viewModel: LotesViewModel = koinViewModel()
 ) {
     val estado by viewModel.estado.collectAsState()
+
+    LaunchedEffect(eventosConexion, usuario) {
+        eventosConexion.collect { viewModel.actualizar() }
+    }
+
     var mostrarFormulario by remember { mutableStateOf(false) }
     var laborPorEliminar by remember { mutableStateOf<Labor?>(null) }
     var lotePorCerrar by remember { mutableStateOf<Lote?>(null) }
