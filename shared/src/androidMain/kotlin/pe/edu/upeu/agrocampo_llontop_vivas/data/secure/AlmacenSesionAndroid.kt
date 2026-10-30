@@ -77,7 +77,7 @@ class AlmacenSesionAndroid(context: Context) : AlmacenSesion {
             partes[1], Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
         )
         val expiracion = Json.parseToJsonElement(String(decoded, Charsets.UTF_8))
-            .jsonObject["exp"]?.jsonPrimitive?.longOrNull ?: return false
+            .jsonObject["exp"]?.jsonPrimitive?.longOrNull ?: return@runCatching false
         expiracion > System.currentTimeMillis() / 1000L + 5L
     }.getOrDefault(false)
 

@@ -7,6 +7,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.remember
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import pe.edu.upeu.agrocampo_llontop_vivas.data.secure.AlmacenSesionAndroid
 import pe.edu.upeu.agrocampo_llontop_vivas.db.AgroDb
@@ -26,7 +27,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            App(driver, AlmacenSesionAndroid(applicationContext))
+            App(driver, remember { AlmacenSesionAndroid(applicationContext) })
         }
     }
 
