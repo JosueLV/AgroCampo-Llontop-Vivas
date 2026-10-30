@@ -63,7 +63,7 @@ fun LotesPantalla(
     if (mostrarFormulario && estado.loteSeleccionado != null) {
         NuevaLaborDialog(
             alCerrar = { mostrarFormulario = false },
-            alGuardar = viewModel::registrarLaborPendiente
+            alGuardar = viewModel::registrarLaborPendienteConJornales
         )
     }
 
@@ -73,7 +73,7 @@ fun LotesPantalla(
             guardando = estado.guardandoEdicion,
             errorServidor = estado.errorEdicion,
             alCerrar = viewModel::cancelarEdicion,
-            alGuardar = viewModel::guardarEdicion
+            alGuardar = viewModel::guardarEdicionConJornales
         )
     }
 
@@ -310,6 +310,7 @@ private fun TarjetaLabor(
                 fontWeight = FontWeight.SemiBold)
             Text("Responsable: ${labor.responsable}")
             Text("Cantidad: ${labor.cantidad}")
+            Text("Jornales: ${labor.cantidadJornales}")
             if (labor.observacion.isNotBlank()) {
                 Text("Observación: ${labor.observacion}")
             }
@@ -332,11 +333,12 @@ private fun TarjetaLabor(
 @Composable
 private fun NuevaLaborDialog(
     alCerrar: () -> Unit,
-    alGuardar: (TipoLabor, String, String, String) -> String?
+    alGuardar: (TipoLabor, String, String, String, String) -> String?
 ) {
     var tipo by remember { mutableStateOf(TipoLabor.RIEGO) }
     var fecha by remember { mutableStateOf("") }
     var cantidad by remember { mutableStateOf("") }
+    var jornales by remember { mutableStateOf("1") }
     var observacion by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -370,6 +372,13 @@ private fun NuevaLaborDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
+                    value = jornales,
+                    onValueChange = { jornales = it; error = null },
+                    label = { Text("Cantidad de jornales") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
                     value = observacion,
                     onValueChange = { observacion = it; error = null },
                     label = { Text("Observación (opcional)") },
@@ -383,7 +392,7 @@ private fun NuevaLaborDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    error = alGuardar(tipo, fecha, cantidad, observacion)
+                    error = alGuardar(tipo, fecha, cantidad, jornales, observacion)
                     if (error == null) alCerrar()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)
@@ -404,11 +413,12 @@ private fun EditarLaborDialog(
     guardando: Boolean,
     errorServidor: String?,
     alCerrar: () -> Unit,
-    alGuardar: (TipoLabor, String, String, String) -> String?
+    alGuardar: (TipoLabor, String, String, String, String) -> String?
 ) {
     var tipo by remember(labor.id) { mutableStateOf(labor.tipo) }
     var fecha by remember(labor.id) { mutableStateOf(labor.fecha) }
     var cantidad by remember(labor.id) { mutableStateOf(labor.cantidad.toString()) }
+    var jornales by remember(labor.id) { mutableStateOf(labor.cantidadJornales.toString()) }
     var observacion by remember(labor.id) { mutableStateOf(labor.observacion) }
     var errorLocal by remember(labor.id) { mutableStateOf<String?>(null) }
 
@@ -445,6 +455,14 @@ private fun EditarLaborDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
+                    value = jornales,
+                    onValueChange = { jornales = it; errorLocal = null },
+                    enabled = !guardando,
+                    label = { Text("Cantidad de jornales") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
                     value = observacion,
                     onValueChange = { observacion = it; errorLocal = null },
                     enabled = !guardando,
@@ -468,7 +486,7 @@ private fun EditarLaborDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    errorLocal = alGuardar(tipo, fecha, cantidad, observacion)
+                    errorLocal = alGuardar(tipo, fecha, cantidad, jornales, observacion)
                 },
                 enabled = !guardando,
                 colors = ButtonDefaults.buttonColors(containerColor = VerdeAgro)

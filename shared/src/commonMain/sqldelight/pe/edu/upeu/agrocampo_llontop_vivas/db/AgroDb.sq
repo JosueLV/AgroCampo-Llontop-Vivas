@@ -16,6 +16,7 @@ CREATE TABLE labor (
     fecha TEXT NOT NULL,
     responsable TEXT NOT NULL,
     cantidad REAL NOT NULL,
+    cantidadJornales INTEGER NOT NULL DEFAULT 1,
     observacion TEXT NOT NULL,
     pendiente INTEGER NOT NULL
 );
@@ -43,8 +44,8 @@ SELECT * FROM labor WHERE loteId = ? ORDER BY fecha DESC, id DESC;
 guardarLabor:
 INSERT OR REPLACE INTO labor (
     id, loteId, tipo, fecha, responsable, cantidad,
-    observacion, pendiente
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+    cantidadJornales, observacion, pendiente
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 eliminarLabor:
 DELETE FROM labor WHERE id = ?;

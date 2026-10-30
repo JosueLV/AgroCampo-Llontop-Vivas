@@ -196,6 +196,19 @@ class LotesViewModel(
         fecha: String,
         cantidadTexto: String,
         observacion: String
+    ): String? = guardarEdicionConJornales(
+        tipo, fecha, cantidadTexto,
+        _estado.value.laborEditando?.cantidadJornales?.toString() ?: "1",
+        observacion
+    )
+
+    /** Valida los jornales antes de enviar un PUT al backend. */
+    fun guardarEdicionConJornales(
+        tipo: TipoLabor,
+        fecha: String,
+        cantidadTexto: String,
+        jornalesTexto: String,
+        observacion: String
     ): String? {
         val labor = _estado.value.laborEditando ?: return "Selecciona una labor."
         if (_estado.value.guardandoEdicion) return "Ya se está guardando la corrección."
@@ -209,6 +222,10 @@ class LotesViewModel(
         if (cantidad == null || !cantidad.isFinite() || cantidad <= 0.0) {
             return "La cantidad debe ser mayor que cero."
         }
+        val jornales = jornalesTexto.trim().toIntOrNull()
+        if (jornales == null || jornales < 1) {
+            return "Los jornales deben ser un número entero mayor que cero."
+        }
         if (observacion.length > 500) return "La observación admite máximo 500 caracteres."
 
         viewModelScope.launch {
@@ -219,6 +236,7 @@ class LotesViewModel(
                         tipo = tipo,
                         fecha = fechaFinal,
                         cantidad = cantidad,
+                        cantidadJornales = jornales,
                         observacion = observacion.trim()
                     )
                 )
@@ -254,6 +272,17 @@ class LotesViewModel(
         fecha: String,
         cantidadTexto: String,
         observacion: String
+    ): String? = registrarLaborPendienteConJornales(
+        tipo, fecha, cantidadTexto, "1", observacion
+    )
+
+    /** Guarda jornales válidos en SQLDelight incluso si el dispositivo está sin conexión. */
+    fun registrarLaborPendienteConJornales(
+        tipo: TipoLabor,
+        fecha: String,
+        cantidadTexto: String,
+        jornalesTexto: String,
+        observacion: String
     ): String? {
         val lote = _estado.value.loteSeleccionado ?: return "Selecciona un lote."
         if (!puedeRegistrarEn(lote)) return "No tienes permiso o la campaña está cerrada."
@@ -263,6 +292,10 @@ class LotesViewModel(
         val cantidad = cantidadTexto.replace(',', '.').toDoubleOrNull()
         if (cantidad == null || !cantidad.isFinite() || cantidad <= 0.0) {
             return "La cantidad debe ser mayor que cero."
+        }
+        val jornales = jornalesTexto.trim().toIntOrNull()
+        if (jornales == null || jornales < 1) {
+            return "Los jornales deben ser un número entero mayor que cero."
         }
         if (observacion.length > 500) return "La observación admite máximo 500 caracteres."
         val usuario = sesionActual.usuario ?: return "Debes iniciar sesión."
@@ -275,7 +308,8 @@ class LotesViewModel(
                     fecha = fechaFinal,
                     responsable = usuario,
                     cantidad = cantidad,
-                    observacion = observacion.trim()
+                    observacion = observacion.trim(),
+                    cantidadJornales = jornales
                 )
             } catch (e: CancellationException) {
                 throw e

@@ -35,7 +35,8 @@ class LaboresRepositorioRemoto(private val cliente: HttpClient) {
                         tipo = labor.tipo.name,
                         fecha = labor.fecha,
                         cantidad = labor.cantidad,
-                        observacion = labor.observacion
+                        observacion = labor.observacion,
+                        cantidadJornales = labor.cantidadJornales
                     )
                 )
             }
@@ -73,7 +74,8 @@ class LaboresRepositorioRemoto(private val cliente: HttpClient) {
                         tipo = labor.tipo.name,
                         fecha = labor.fecha,
                         cantidad = labor.cantidad,
-                        observacion = labor.observacion
+                        observacion = labor.observacion,
+                        cantidadJornales = labor.cantidadJornales
                     )
                 )
             }
