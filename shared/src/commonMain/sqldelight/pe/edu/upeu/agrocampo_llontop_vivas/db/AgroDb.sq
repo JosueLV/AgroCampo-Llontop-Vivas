@@ -1,0 +1,70 @@
+CREATE TABLE lote (
+    id INTEGER NOT NULL PRIMARY KEY,
+    codigo TEXT NOT NULL,
+    nombre TEXT NOT NULL,
+    hectareas REAL NOT NULL,
+    cultivo TEXT NOT NULL,
+    valle TEXT NOT NULL,
+    campaniaCerrada INTEGER NOT NULL,
+    dosisMaxima REAL NOT NULL
+);
+
+CREATE TABLE labor (
+    id INTEGER NOT NULL PRIMARY KEY,
+    loteId INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    responsable TEXT NOT NULL,
+    cantidad REAL NOT NULL,
+    cantidadJornales INTEGER NOT NULL DEFAULT 1,
+    observacion TEXT NOT NULL,
+    pendiente INTEGER NOT NULL
+);
+
+CREATE TABLE sincronizacion (
+    id INTEGER NOT NULL PRIMARY KEY,
+    ultimaSincronizacion TEXT
+);
+
+observarLotes:
+SELECT * FROM lote ORDER BY codigo;
+
+buscarLote:
+SELECT * FROM lote WHERE id = ?;
+
+guardarLote:
+INSERT OR REPLACE INTO lote (
+    id, codigo, nombre, hectareas, cultivo, valle,
+    campaniaCerrada, dosisMaxima
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+observarLaboresPorLote:
+SELECT * FROM labor WHERE loteId = ? ORDER BY fecha DESC, id DESC;
+
+guardarLabor:
+INSERT OR REPLACE INTO labor (
+    id, loteId, tipo, fecha, responsable, cantidad,
+    cantidadJornales, observacion, pendiente
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+eliminarLabor:
+DELETE FROM labor WHERE id = ?;
+
+observarPendientes:
+SELECT * FROM labor WHERE pendiente = 1 ORDER BY id ASC;
+
+contarPendientesPorLote:
+SELECT loteId, COUNT(*) AS totalPendientes
+FROM labor
+WHERE pendiente = 1
+GROUP BY loteId;
+
+siguienteIdLocal:
+SELECT COALESCE(MIN(id), 0) FROM labor;
+
+observarUltimaSincronizacion:
+SELECT ultimaSincronizacion FROM sincronizacion WHERE id = 1;
+
+guardarUltimaSincronizacion:
+INSERT OR REPLACE INTO sincronizacion (id, ultimaSincronizacion)
+VALUES (1, ?);

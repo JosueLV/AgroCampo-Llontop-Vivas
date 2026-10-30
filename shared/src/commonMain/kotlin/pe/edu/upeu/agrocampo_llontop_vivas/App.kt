@@ -1,48 +1,62 @@
 package pe.edu.upeu.agrocampo_llontop_vivas
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
-
-import agrocampollontopvivas.shared.generated.resources.Res
-import agrocampollontopvivas.shared.generated.resources.compose_multiplatform
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import app.cash.sqldelight.db.SqlDriver
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import org.koin.compose.KoinApplication
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.dsl.koinConfiguration
+import pe.edu.upeu.agrocampo_llontop_vivas.di.appModule
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.AlmacenSesion
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.AlmacenSesionVolatil
+import pe.edu.upeu.agrocampo_llontop_vivas.di.crearModuloLotes
+import pe.edu.upeu.agrocampo_llontop_vivas.presentation.lotes.LotesPantalla
+import pe.edu.upeu.agrocampo_llontop_vivas.presentation.sesion.LoginPantalla
+import pe.edu.upeu.agrocampo_llontop_vivas.presentation.sesion.LoginViewModel
 
 @Composable
-@Preview
-fun App() {
-    MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
+fun App(
+    driver: SqlDriver,
+    almacenSesion: AlmacenSesion = AlmacenSesionVolatil(),
+    eventosConexion: Flow<Unit> = emptyFlow()
+) {
+    KoinApplication(
+        configuration = koinConfiguration {
+            modules(appModule(almacenSesion), crearModuloLotes(driver))
+        }
+    ) {
+        val loginViewModel = koinViewModel<LoginViewModel>()
+        val estado by loginViewModel.estado.collectAsState()
+
+        MaterialTheme {
+            Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+            val sesion = estado.sesion
+            if (sesion == null) {
+                LoginPantalla(
+                    alIngresar = loginViewModel::ingresar,
+                    habilitado = !estado.cargando,
+                    avisoServidor = when {
+                        estado.cargando -> "Conectando con AgroAPI..."
+                        else -> estado.error
+                    }
+                )
+            } else {
+                LotesPantalla(
+                    usuario = sesion.usuario,
+                    rol = sesion.rol,
+                    privilegios = sesion.privilegios,
+                    eventosConexion = eventosConexion,
+                    alCerrarSesion = loginViewModel::cerrarSesion
+                )
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
             }
         }
     }

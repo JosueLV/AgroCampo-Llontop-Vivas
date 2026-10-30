@@ -1,0 +1,56 @@
+package pe.edu.upeu.agrocampo_llontop_vivas.data.remote
+
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.HttpResponseValidator
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.client.request.header
+import pe.edu.upeu.agrocampo_llontop_vivas.domain.model.SesionActual
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
+
+/** URL según el destino. Android Emulator usa 10.0.2.2 para llegar al Windows anfitrión. */
+object ApiConfig {
+    val BASE_URL: String get() = urlBaseAgroApi()
+}
+
+internal expect fun urlBaseAgroApi(): String
+
+fun crearClienteHttp(sesionActual: SesionActual): HttpClient {
+    return HttpClient {
+        expectSuccess = false
+
+        defaultRequest {
+            sesionActual.token?.let { token ->
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }
+        }
+
+        HttpResponseValidator {
+            validateResponse { respuesta ->
+                if (respuesta.status == HttpStatusCode.Unauthorized &&
+                    !respuesta.call.request.url.encodedPath.endsWith("/auth/login")
+                ) {
+                    sesionActual.cerrar()
+                }
+            }
+        }
+
+        install(ContentNegotiation) {
+            json(
+                Json {
+                    ignoreUnknownKeys = true
+                }
+            )
+        }
+
+        install(HttpTimeout) {
+            requestTimeoutMillis = 10000
+            connectTimeoutMillis = 5000
+            socketTimeoutMillis = 10000
+        }
+    }
+}

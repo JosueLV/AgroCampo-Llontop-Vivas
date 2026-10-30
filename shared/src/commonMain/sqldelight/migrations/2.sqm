@@ -1,0 +1,6 @@
+-- Añade la tabla introducida para registrar la última sincronización.
+-- También funciona al actualizar instalaciones existentes con una versión anterior.
+CREATE TABLE IF NOT EXISTS sincronizacion (
+    id INTEGER NOT NULL PRIMARY KEY,
+    ultimaSincronizacion TEXT
+);

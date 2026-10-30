@@ -1,0 +1,13 @@
+package pe.edu.upeu.agrocampo_llontop_vivas.domain.model
+
+data class Labor(
+    val id: Long,
+    val loteId: Long,
+    val tipo: TipoLabor,
+    val fecha: String,
+    val responsable: String,
+    val cantidad: Double,
+    val observacion: String,
+    val pendiente: Boolean,
+    val cantidadJornales: Int = 1
+)
