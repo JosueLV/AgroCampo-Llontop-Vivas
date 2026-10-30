@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import pe.edu.upeu.agrocampo_llontop_vivas.data.secure.AlmacenSesionAndroid
 import pe.edu.upeu.agrocampo_llontop_vivas.db.AgroDb
 
 class MainActivity : ComponentActivity() {
@@ -18,16 +19,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Mantener visible el reloj y el icono de modo avión.
         window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = true // Iconos oscuros sobre fondo claro
+            isAppearanceLightStatusBars = true
             show(WindowInsetsCompat.Type.statusBars())
         }
 
         setContent {
-            App(driver)
+            App(driver, AlmacenSesionAndroid(applicationContext))
         }
     }
 
